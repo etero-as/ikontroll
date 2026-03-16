@@ -41,6 +41,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
+import SaveChangesButton from '@/components/SaveChangesButton';
 import { db, storage } from '@/lib/firebase';
 import {
   Course,
@@ -471,6 +472,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const [languageInput, setLanguageInput] = useState('');
   const languageInputRef = useRef<HTMLInputElement | null>(null);
+  const [savingCourseInfo, setSavingCourseInfo] = useState(false);
   const statusValue = form.watch('status') ?? 'inactive';
   const expirationType = form.watch('expirationType') ?? 'none';
   const [courseImageUrl, setCourseImageUrl] = useState<string | null>(null);
@@ -777,6 +779,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const handleCourseInfoSave = form.handleSubmit(async (values) => {
     if (!course) return;
     try {
+      setSavingCourseInfo(true);
       const normalizeForSave = (map: LocaleStringMap) => {
         const base = createEmptyLocaleMap(languages);
         Object.entries(map ?? {}).forEach(([lang, value]) => {
@@ -833,6 +836,8 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     } catch (err) {
       console.error('Failed to update course', err);
       alert('Kunne ikke oppdatere kursinformasjon.');
+    } finally {
+      setSavingCourseInfo(false);
     }
   });
 
@@ -1220,12 +1225,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             >
               Forhåndsvis
             </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Oppdater kurs
-            </button>
+            <SaveChangesButton type="button" onClick={handleCourseInfoSave} loading={savingCourseInfo} />
           </div>
         </form>
       </div>

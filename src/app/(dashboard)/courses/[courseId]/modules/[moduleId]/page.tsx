@@ -28,6 +28,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 
 import { db, storage } from '@/lib/firebase';
 import { useCourseModule } from '@/hooks/useCourseModule';
+import SaveChangesButton from '@/components/SaveChangesButton';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -526,14 +527,7 @@ export default function CourseModuleDetailPage() {
           >
             Forhåndsvis
           </button>
-          <button
-            onClick={handleSave}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
-            disabled={saving}
-            type="button"
-          >
-            {saving ? 'Lagrer …' : 'Lagre endringer'}
-          </button>
+          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
         </div>
       </div>
     </section>

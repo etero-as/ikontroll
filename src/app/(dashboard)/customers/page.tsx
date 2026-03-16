@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -10,12 +10,28 @@ import CustomerManager from './CustomerManager';
 export default function CustomersPage() {
   const { isSystemOwner, isCustomerAdmin, activeCustomerId, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const hasRedirectedRef = useRef(false);
+  const redirectPath = activeCustomerId ? `/customers/${activeCustomerId}` : null;
 
   useEffect(() => {
-    if (!loading && !isSystemOwner && isCustomerAdmin && activeCustomerId) {
-      router.replace(`/customers/${activeCustomerId}`);
+    const shouldRedirect =
+      !loading &&
+      !isSystemOwner &&
+      isCustomerAdmin &&
+      Boolean(redirectPath) &&
+      pathname !== redirectPath;
+
+    if (shouldRedirect && redirectPath && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.replace(redirectPath);
+      return;
     }
-  }, [activeCustomerId, isCustomerAdmin, isSystemOwner, loading, router]);
+
+    if (!shouldRedirect) {
+      hasRedirectedRef.current = false;
+    }
+  }, [isCustomerAdmin, isSystemOwner, loading, pathname, redirectPath, router]);
 
   if (!isSystemOwner) {
     return (
