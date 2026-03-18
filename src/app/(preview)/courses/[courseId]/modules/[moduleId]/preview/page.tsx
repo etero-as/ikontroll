@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useCourse } from '@/hooks/useCourse';
@@ -176,9 +176,9 @@ const getModuleStatusLabel = (locale: string, isComplete: boolean): string => {
 export default function ModulePreviewPage({
   params,
 }: {
-  params: { courseId: string; moduleId: string };
+  params: Promise<{ courseId: string; moduleId: string }>;
 }) {
-  const { courseId, moduleId } = params;
+  const { courseId, moduleId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedLang = searchParams.get('lang');

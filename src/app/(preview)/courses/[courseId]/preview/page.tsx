@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { use, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useCourse } from '@/hooks/useCourse';
@@ -163,9 +163,9 @@ const getDateLocale = (locale: string): string => {
 export default function CoursePreviewPage({
   params,
 }: {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) {
-  const { courseId } = params;
+  const { courseId } = use(params);
   const router = useRouter();
   const { course, loading, error } = useCourse(courseId);
   const {
