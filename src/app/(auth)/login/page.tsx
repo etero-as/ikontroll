@@ -20,8 +20,10 @@ export default function LoginPage() {
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
 
-  // Simple locale detection for login page
-  const [locale] = useState(() => getPreferredLocale(['no', 'en']));
+  const [locale, setLocale] = useState('no');
+  useEffect(() => {
+    setLocale(getPreferredLocale(['no', 'en']));
+  }, []);
 
   const t = getTranslation(locale);
 
