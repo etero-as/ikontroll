@@ -366,9 +366,9 @@ export default function ModulePreviewPage({
               item.type === 'image' ? (
                 <div
                   key={item.id}
-                  className="relative h-56 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
                 >
-                  <img src={item.url} alt="Modulbilde" className="h-full w-full object-cover" />
+                  <img src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
                 </div>
               ) : (
                 <div

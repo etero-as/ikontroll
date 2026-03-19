@@ -527,7 +527,7 @@ export default function ConsumerModuleView({
                           </span>
                         </div>
                       ) : (
-                        <img src={url} alt="Modulbilde" className="h-full w-full object-cover" />
+                        <img src={url} alt="Modulbilde" className="h-full w-full object-contain" />
                       )}
                     </button>
                   );
@@ -758,7 +758,7 @@ export default function ConsumerModuleView({
                     ✕
                   </button>
                   {mediaPreview && (
-                    <div className="max-h-[80vh] w-full overflow-hidden bg-black">
+                    <div className="flex w-full items-center justify-center overflow-hidden bg-slate-100">
                       {mediaPreview.type === 'video' ? (
                         isYouTubeUrl(mediaPreview.url) ? (
                           <iframe
@@ -784,7 +784,7 @@ export default function ConsumerModuleView({
                         <img
                           src={mediaPreview.url}
                           alt="Modulbilde"
-                          className="h-[80vh] w-full object-contain bg-black"
+                          className="block w-auto h-auto max-w-full max-h-[85vh] object-contain"
                         />
                       )}
                     </div>
