@@ -1170,9 +1170,9 @@ const SortableMediaCard = ({
         </span>
       </div>
       <div className="flex flex-col gap-3">
-        <div className="flex h-48 w-full items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+        <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
           {item.type === 'image' ? (
-            <img src={item.url} alt="Forhåndsvis media" className="h-full w-full object-cover" />
+            <img src={item.url} alt="Forhåndsvis media" className="h-full w-full object-contain" />
           ) : item.type === 'video' ? (
             isYouTubeUrl(item.url) ? (
               <iframe
