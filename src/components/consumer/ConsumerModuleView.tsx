@@ -34,6 +34,27 @@ const DEFAULT_EXAM_PASS_PERCENTAGE = 80;
 const isYouTubeUrl = (url: string): boolean =>
   /youtu\.be|youtube\.com/.test(url.toLowerCase());
 
+const MediaImage = ({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) => {
+  const [error, setError] = useState(false);
+  if (error) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
+        <span className="text-3xl" role="img" aria-label="Bildet mangler">🖼️</span>
+        <p className="text-xs font-semibold">Bildet er ikke å finne</p>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+};
+
 const getAlternativeLabel = (
   alternative: CourseQuestionAlternative,
   locale: string,
@@ -191,6 +212,10 @@ export default function ConsumerModuleView({
   const [mediaPreview, setMediaPreview] = useState<{ url: string; type: MediaPreviewType } | null>(
     null,
   );
+  const [previewImgError, setPreviewImgError] = useState(false);
+  useEffect(() => {
+    setPreviewImgError(false);
+  }, [mediaPreview?.url]);
   const courseCompletionAcknowledgedRef = useRef(false);
   const completionRecordedRef = useRef(false);
 
@@ -527,7 +552,7 @@ export default function ConsumerModuleView({
                           </span>
                         </div>
                       ) : (
-                        <img src={url} alt="Modulbilde" className="h-full w-full object-contain" />
+                        <MediaImage src={url} alt="Modulbilde" className="h-full w-full object-contain" />
                       )}
                     </button>
                   );
@@ -780,11 +805,17 @@ export default function ConsumerModuleView({
                           title="Moduldokument"
                           className="h-[80vh] w-full bg-white"
                         />
+                      ) : previewImgError ? (
+                        <div className="flex flex-col items-center justify-center gap-3 p-16 text-slate-400">
+                          <span className="text-5xl" role="img" aria-label="Bildet mangler">🖼️</span>
+                          <p className="text-sm font-semibold">Bildet er ikke å finne</p>
+                        </div>
                       ) : (
                         <img
                           src={mediaPreview.url}
                           alt="Modulbilde"
                           className="block w-auto h-auto max-w-full max-h-[85vh] object-contain"
+                          onError={() => setPreviewImgError(true)}
                         />
                       )}
                     </div>

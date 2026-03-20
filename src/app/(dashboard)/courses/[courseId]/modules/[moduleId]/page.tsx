@@ -881,7 +881,6 @@ const LocaleMediaEditor = ({
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
-  const showUrlButtons = false; // Hide manual URL entry until further notice
   const [uploading, setUploading] = useState<'image' | 'video' | 'document' | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -913,13 +912,13 @@ const LocaleMediaEditor = ({
     }
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     if (!event.over || event.active.id === event.over.id) return;
     const oldIndex = items.findIndex((item) => item.id === event.active.id);
     const newIndex = items.findIndex((item) => item.id === event.over?.id);
     if (oldIndex === -1 || newIndex === -1) return;
     updateList(arrayMove(items, oldIndex, newIndex));
-  };
+  }, [items, updateList]);
 
   const handleRemove = (id: string) => {
     const target = items.find((item) => item.id === id);
@@ -929,18 +928,6 @@ const LocaleMediaEditor = ({
     }
   };
 
-  const handleTypeChange = (id: string, type: ModuleMediaItem['type']) => {
-    updateList(
-      items.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              type,
-            }
-          : item,
-      ),
-    );
-  };
 
   const handleUploadClick = (type: 'image' | 'video' | 'document') => {
     if (type === 'image') {
@@ -986,27 +973,6 @@ const LocaleMediaEditor = ({
     }
   };
 
-  const handleAddUrl = (type: 'image' | 'video' | 'document') => {
-    const promptLabel =
-      type === 'image'
-        ? 'Lim inn URL til bilde'
-        : type === 'video'
-          ? 'Lim inn URL til video (YouTube eller videofil)'
-          : 'Lim inn URL til PDF eller annet dokument';
-    const next = window.prompt(promptLabel);
-    if (!next) return;
-    const trimmed = next.trim();
-    if (!trimmed) return;
-    updateList([
-      ...items,
-      {
-        id: generateId(),
-        url: trimmed,
-        type,
-      },
-    ]);
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -1028,7 +994,6 @@ const LocaleMediaEditor = ({
                   key={item.id}
                   item={item}
                   onRemove={() => handleRemove(item.id)}
-                  onTypeChange={(type) => handleTypeChange(item.id, type)}
                 />
               ))}
             </div>
@@ -1060,31 +1025,6 @@ const LocaleMediaEditor = ({
         >
           {uploading === 'document' ? 'Laster opp …' : 'Last opp PDF'}
         </button>
-        {showUrlButtons && (
-          <>
-            <button
-              type="button"
-              onClick={() => handleAddUrl('image')}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til bilde-URL
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAddUrl('video')}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til video-URL
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAddUrl('document')}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til dokument-URL
-            </button>
-          </>
-        )}
       </div>
       <input
         ref={imageInputRef}
@@ -1127,18 +1067,52 @@ const getFileNameFromUrl = (url: string) => {
   }
 };
 
+const MEDIA_ERROR_CONFIG = {
+  image: {
+    icon: '🖼️',
+    label: 'Bildet er ikke tilgjengelig',
+    message: 'Vi finner ikke bildet. Fjern det og last det opp på nytt.'
+  },
+  video: {
+    icon: '🎥',
+    label: 'Videoen er ikke tilgjengelig',
+    message: 'Vi finner ikke videoen. Fjern den og last den opp på nytt.'
+  },
+  document: {
+    icon: '📄',
+    label: 'Dokumentet er ikke tilgjengelig',
+    message: 'Vi finner ikke dokumentet. Fjern det og last det opp på nytt.'
+  }
+} as const;
+
+const MediaErrorFallback = ({ url, type }: { url: string; type: ModuleMediaItem['type'] }) => {
+  const { icon, label, message } = MEDIA_ERROR_CONFIG[type];
+  const filename = getFileNameFromUrl(url);
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
+      <span className="text-3xl" role="img" aria-label={label}>{icon}</span>
+      <p className="text-xs font-semibold text-slate-600">{message}</p>
+      <p className="text-[10px] font-mono text-slate-500 break-all">
+        <span className="font-semibold not-italic">Filnavn: </span>{filename}
+      </p>
+    </div>
+  );
+};
+
 const SortableMediaCard = ({
   item,
   onRemove,
-  onTypeChange,
 }: {
   item: ModuleMediaItem;
   onRemove: () => void;
-  onTypeChange: (type: ModuleMediaItem['type']) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   });
+  const [mediaError, setMediaError] = useState(false);
+  useEffect(() => {
+    setMediaError(false);
+  }, [item.url]);
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
@@ -1171,8 +1145,15 @@ const SortableMediaCard = ({
       </div>
       <div className="flex flex-col gap-3">
         <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
-          {item.type === 'image' ? (
-            <img src={item.url} alt="Forhåndsvis media" className="h-full w-full object-contain" />
+          {mediaError ? (
+            <MediaErrorFallback url={item.url} type={item.type} />
+          ) : item.type === 'image' ? (
+            <img
+              src={item.url}
+              alt="Forhåndsvis media"
+              className="h-full w-full object-contain"
+              onError={() => setMediaError(true)}
+            />
           ) : item.type === 'video' ? (
             isYouTubeUrl(item.url) ? (
               <iframe
@@ -1183,7 +1164,11 @@ const SortableMediaCard = ({
                 className="h-full w-full"
               />
             ) : (
-              <video controls className="h-full w-full object-cover">
+              <video
+                controls
+                className="h-full w-full object-cover"
+                onError={() => setMediaError(true)}
+              >
                 <source src={item.url} />
                 Nettleseren støtter ikke videoavspilling.
               </video>
@@ -1198,39 +1183,13 @@ const SortableMediaCard = ({
           )}
         </div>
         <div className="space-y-3">
-          <label className="block text-xs font-semibold text-slate-600">
-            Type
-            <div className="relative mt-1 w-full max-w-xs">
-              <select
-                value={item.type}
-                onChange={(e) => onTypeChange(e.target.value as ModuleMediaItem['type'])}
-                className="appearance-none w-full rounded-xl border border-slate-200 px-3 py-2 pr-10 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              >
-                <option value="image">Bilde</option>
-                <option value="video">Video</option>
-                <option value="document">Dokument (PDF)</option>
-              </select>
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 0 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.25 8.29a.75.75 0 0 1-.02-1.08z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
-            </div>
-          </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => window.open(item.url, '_blank')}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              disabled={mediaError}
+              title={mediaError ? 'Filen er ikke tilgjengelig' : undefined}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Åpne
             </button>
@@ -1464,5 +1423,4 @@ const QuestionEditor = ({
     </div>
   );
 };
-
 
