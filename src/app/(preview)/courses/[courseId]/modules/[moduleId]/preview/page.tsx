@@ -69,6 +69,19 @@ const getLocalizedList = (
 const isYouTubeUrl = (url: string): boolean =>
   /youtu\.be|youtube\.com/.test(url.toLowerCase());
 
+const PreviewMediaImage = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+  const [error, setError] = useState(false);
+  if (error) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
+        <span className="text-3xl" role="img" aria-label="Bildet mangler">🖼️</span>
+        <p className="text-xs font-semibold">Bildet er ikke å finne</p>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+};
+
 const getAlternativeLabel = (
   alternative: CourseQuestionAlternative,
   locale: string,
@@ -368,7 +381,7 @@ export default function ModulePreviewPage({
                   key={item.id}
                   className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
                 >
-                  <img src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                  <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
                 </div>
               ) : (
                 <div
