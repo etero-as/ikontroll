@@ -42,6 +42,7 @@ import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DragHandle from '@/components/DragHandle';
 import { db, storage } from '@/lib/firebase';
 import {
   Course,
@@ -164,26 +165,7 @@ const SortableModuleItem = ({
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <button
-            type="button"
-            className="mt-1 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 cursor-grab active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-            aria-label="Endre rekkefølge"
-            title="Endre rekkefølge"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            >
-              <path d="M5 8h14M5 12h14M5 16h14" strokeLinecap="round" />
-            </svg>
-          </button>
+          <DragHandle attributes={attributes} listeners={listeners} className="mt-1" />
           <div
             className="flex-1 cursor-pointer rounded-xl border border-transparent px-1 py-0.5 transition hover:border-slate-200"
             onClick={() => onOpen(module.id)}
