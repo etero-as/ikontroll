@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -89,13 +90,6 @@ export const Topbar = () => {
     await logout();
   };
 
-  const handleGoToAccount = () => {
-    if (activeCustomerId) {
-      router.push(`/customers/${activeCustomerId}`);
-      setOpen(false);
-      setPosition(null);
-    }
-  };
 
   const canSwitchView = hasConsumerAccess && (isCustomerAdmin || isSystemOwner);
 
@@ -121,12 +115,13 @@ export const Topbar = () => {
               <p className="text-xs text-slate-500">{profile?.email}</p>
             </div>
             {isCustomerAdmin && activeCustomerId && (
-              <button
-                onClick={handleGoToAccount}
-                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+              <Link
+                href={`/customers/${activeCustomerId}`}
+                onClick={() => { setOpen(false); setPosition(null); }}
+                className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Min konto
-              </button>
+              </Link>
             )}
             {canSwitchView && (
               <button
