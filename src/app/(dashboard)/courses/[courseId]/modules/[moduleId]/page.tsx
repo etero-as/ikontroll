@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChangeEvent } from 'react';
 import {
   DndContext,
+  DragOverlay,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
   PointerSensor,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -18,6 +24,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   deleteDoc,
   doc,
@@ -29,6 +36,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { db, storage } from '@/lib/firebase';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -894,6 +902,10 @@ const LocaleMediaEditor = ({
     [media, activeLanguage, onChange],
   );
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeItem, setActiveItem] = useState<ModuleMediaItem | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
   const maybeDeleteUploadedFile = useCallback(async (url: string) => {
     if (!url.includes('firebasestorage.googleapis.com')) return;
     try {
@@ -912,13 +924,38 @@ const LocaleMediaEditor = ({
     }
   }, []);
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const id = String(event.active.id);
+    setActiveId(id);
+    setActiveItem(items.find((item) => item.id === id) ?? null);
+    setOverId(null);
+  }, [items]);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const newOverId = event.over ? String(event.over.id) : null;
+    const currentActiveId = event.active ? String(event.active.id) : null;
+    setOverId(newOverId && newOverId !== currentActiveId ? newOverId : null);
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    if (!event.over || event.active.id === event.over.id) return;
-    const oldIndex = items.findIndex((item) => item.id === event.active.id);
-    const newIndex = items.findIndex((item) => item.id === event.over?.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    updateList(arrayMove(items, oldIndex, newIndex));
+    const { active, over } = event;
+    setActiveId(null);
+    setActiveItem(null);
+    setOverId(null);
+    if (!over || active.id === over.id) return;
+    const draggedIdx = items.findIndex((item) => item.id === active.id);
+    const targetIdx = items.findIndex((item) => item.id === over.id);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+    const swapped = [...items];
+    [swapped[draggedIdx], swapped[targetIdx]] = [swapped[targetIdx], swapped[draggedIdx]];
+    updateList(swapped);
   }, [items, updateList]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+    setActiveItem(null);
+    setOverId(null);
+  }, []);
 
   const handleRemove = (id: string) => {
     const target = items.find((item) => item.id === id);
@@ -986,18 +1023,28 @@ const LocaleMediaEditor = ({
           Ingen media er lagt til for dette språket ennå.
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext items={items.map((item) => item.id)} strategy={() => null}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => (
                 <SortableMediaCard
                   key={item.id}
                   item={item}
                   onRemove={() => handleRemove(item.id)}
+                  isTarget={overId === item.id && activeId !== null && activeId !== item.id}
                 />
               ))}
             </div>
           </SortableContext>
+          <DragOverlay dropAnimation={null}>
+            {activeItem ? <MediaDragOverlay item={activeItem} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
       <div className="flex flex-wrap gap-2">
@@ -1099,49 +1146,87 @@ const MediaErrorFallback = ({ url, type }: { url: string; type: ModuleMediaItem[
   );
 };
 
-const SortableMediaCard = ({
-  item,
-  onRemove,
-}: {
-  item: ModuleMediaItem;
-  onRemove: () => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const [mediaError, setMediaError] = useState(false);
-  useEffect(() => {
-    setMediaError(false);
-  }, [item.url]);
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
-  };
+const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
   const typeLabel =
     item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
   const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${
-        isDragging ? 'ring-2 ring-slate-300' : ''
-      }`}
-    >
+    <div className="space-y-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl ring-2 ring-slate-300 cursor-grabbing opacity-95">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="cursor-grab rounded border border-slate-200 px-2 py-1 text-slate-700"
-          aria-label="Flytt"
-        >
-          ⇅
-        </button>
+        <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400">
+          <DragHandleIcon />
+        </span>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
           {typeLabel}
         </span>
+      </div>
+      <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+        {item.type === 'image' ? (
+          <img src={item.url} alt="" className="h-full w-full object-contain" />
+        ) : item.type === 'video' ? (
+          <div className="flex h-full w-full items-center justify-center text-4xl">🎥</div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-600">
+            <span className="text-4xl">📄</span>
+            <p className="text-xs font-semibold break-all">{documentName ?? 'Dokument'}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+const SortableMediaCard = ({
+  item,
+  onRemove,
+  isTarget,
+}: {
+  item: ModuleMediaItem;
+  onRemove: () => void;
+  isTarget: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({ id: item.id });
+  const [mediaError, setMediaError] = useState(false);
+  useEffect(() => {
+    setMediaError(false);
+  }, [item.url]);
+
+  const typeLabel =
+    item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
+  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
+
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 h-full min-h-70"
+        style={{ visibility: 'hidden' }}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-3 rounded-2xl border bg-white p-4 shadow-sm transition-transform duration-200 ${
+        isTarget
+          ? 'border-indigo-400 ring-2 ring-indigo-300 bg-indigo-50 scale-[1.03]'
+          : 'border-slate-200 scale-100'
+      }`}
+    >
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+        <DragHandle attributes={attributes} listeners={listeners} />
+        <div className="flex items-center gap-2">
+          {isTarget && (
+            <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+              ↔ Bytt
+            </span>
+          )}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
+            {typeLabel}
+          </span>
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
@@ -1218,6 +1303,12 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
   const addQuestion = () => {
     onChange([...questions, createEmptyQuestion(languages)]);
   };
@@ -1230,6 +1321,18 @@ const QuestionListEditor = ({
 
   const removeQuestion = (index: number) => {
     onChange(questions.filter((_, idx) => idx !== index));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
+      return;
+    }
+    const oldIndex = questions.findIndex((question) => question.id === event.active.id);
+    const newIndex = questions.findIndex((question) => question.id === event.over?.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return;
+    }
+    onChange(arrayMove(questions, oldIndex, newIndex));
   };
 
   return (
@@ -1251,20 +1354,150 @@ const QuestionListEditor = ({
           Ingen kontrollspørsmål lagt til ennå.
         </div>
       ) : (
-        questions.map((question, index) => (
-          <QuestionEditor
-            key={question.id}
-            index={index}
-            question={question}
-            onChange={(next) => updateQuestion(index, next)}
-            onRemove={() => removeQuestion(index)}
-            languages={languages}
-            activeLanguage={activeLanguage}
-          />
-        ))
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={questions.map((question) => question.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {questions.map((question, index) => (
+                <SortableQuestionEditor
+                  key={question.id}
+                  id={question.id}
+                  index={index}
+                  question={question}
+                  onChange={(next) => updateQuestion(index, next)}
+                  onRemove={() => removeQuestion(index)}
+                  languages={languages}
+                  activeLanguage={activeLanguage}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
+};
+
+const SortableQuestionEditor = ({
+  id,
+  question,
+  onChange,
+  onRemove,
+  languages,
+  activeLanguage,
+  index,
+}: {
+  id: UniqueIdentifier;
+  question: CourseQuestion;
+  onChange: (next: CourseQuestion) => void;
+  onRemove: () => void;
+  languages: string[];
+  activeLanguage: string;
+  index: number;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <QuestionEditor
+        index={index}
+        question={question}
+        onChange={onChange}
+        onRemove={onRemove}
+        languages={languages}
+        activeLanguage={activeLanguage}
+        dragHandleProps={{ attributes, listeners }}
+      />
+    </div>
+  );
+};
+
+const SortableQuestionAlternative = ({
+  id,
+  alternative,
+  idx,
+  question,
+  currentCorrectIds,
+  onToggleCorrect,
+  onRemove,
+  onUpdate,
+  activeLanguage,
+}: {
+  id: UniqueIdentifier;
+  alternative: CourseQuestionAlternative;
+  idx: number;
+  question: CourseQuestion;
+  currentCorrectIds: string[];
+  onToggleCorrect: (altId: string) => void;
+  onRemove: (altId: string) => void;
+  onUpdate: (altId: string, map: LocaleStringMap) => void;
+  activeLanguage: string;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <DragHandle attributes={attributes} listeners={listeners} />
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Alternativ {idx + 1}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={currentCorrectIds.includes(alternative.id)}
+              onChange={() => onToggleCorrect(alternative.id)}
+            />
+            Riktig svar
+          </label>
+          {question.alternatives.length > 2 && (
+            <button
+              type="button"
+              onClick={() => onRemove(alternative.id)}
+              className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            >
+              Fjern
+            </button>
+          )}
+        </div>
+      </div>
+
+      <LocaleFieldEditor
+        label="Alternativ tekst"
+        value={alternative.altText}
+        onChange={(next) => onUpdate(alternative.id, next)}
+        activeLanguage={activeLanguage}
+      />
+    </div>
+  );
+};
+
+type DragHandleProps = {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
 };
 
 const QuestionEditor = ({
@@ -1274,6 +1507,7 @@ const QuestionEditor = ({
   languages,
   activeLanguage,
   index,
+  dragHandleProps,
 }: {
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
@@ -1281,7 +1515,17 @@ const QuestionEditor = ({
   languages: string[];
   activeLanguage: string;
   index: number;
+  dragHandleProps?: {
+    attributes: DragHandleProps['attributes'];
+    listeners: DragHandleProps['listeners'];
+  };
 }) => {
+  const alternativeSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
   const updateLocaleField = (key: 'title' | 'contentText', map: LocaleStringMap) => {
     onChange({ ...question, [key]: map });
   };
@@ -1339,16 +1583,46 @@ const QuestionEditor = ({
     });
   };
 
+  const handleAlternativeDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
+      return;
+    }
+    const oldIndex = question.alternatives.findIndex((alt) => alt.id === event.active.id);
+    const newIndex = question.alternatives.findIndex((alt) => alt.id === event.over?.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return;
+    }
+    const reorderedAlternatives = arrayMove(question.alternatives, oldIndex, newIndex);
+    const orderedCorrectIds = reorderedAlternatives
+      .map((alt) => alt.id)
+      .filter((id) => currentCorrectIds.includes(id));
+    onChange({
+      ...question,
+      alternatives: reorderedAlternatives,
+      correctAnswerIds: orderedCorrectIds,
+      correctAnswerId: orderedCorrectIds[0],
+    });
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex items-start gap-2">
+          {dragHandleProps && (
+            <DragHandle
+              attributes={dragHandleProps.attributes}
+              listeners={dragHandleProps.listeners}
+              className="mt-0.5"
+            />
+          )}
+          <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Spørsmål #{index + 1}
           </p>
           <p className="text-xs text-slate-500">
             {question.alternatives.length} alternativer
           </p>
+          </div>
         </div>
         <button
           type="button"
@@ -1380,44 +1654,29 @@ const QuestionEditor = ({
             </button>
           </div>
 
-          {question.alternatives.map((alternative, idx) => (
-            <div
-              key={alternative.id}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
+            <SortableContext
+              items={question.alternatives.map((alternative) => alternative.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <div className="flex items-start justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Alternativ {idx + 1}
-                </p>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={currentCorrectIds.includes(alternative.id)}
-                      onChange={() => toggleCorrectAnswer(alternative.id)}
-                    />
-                    Riktig svar
-                  </label>
-                  {question.alternatives.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAlternative(alternative.id)}
-                      className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-                    >
-                      Fjern
-                    </button>
-                  )}
-                </div>
+              <div className="space-y-3">
+                {question.alternatives.map((alternative, idx) => (
+                  <SortableQuestionAlternative
+                    key={alternative.id}
+                    id={alternative.id}
+                    alternative={alternative}
+                    idx={idx}
+                    question={question}
+                    currentCorrectIds={currentCorrectIds}
+                    onToggleCorrect={toggleCorrectAnswer}
+                    onRemove={removeAlternative}
+                    onUpdate={updateAlternative}
+                    activeLanguage={activeLanguage}
+                  />
+                ))}
               </div>
-
-              <LocaleFieldEditor
-                label="Alternativ tekst"
-                value={alternative.altText}
-                onChange={(next) => updateAlternative(alternative.id, next)}
-                activeLanguage={activeLanguage}
-              />
-            </div>
-          ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </div>
