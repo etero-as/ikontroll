@@ -70,6 +70,20 @@ const normalizeLocaleMap = (value: unknown): LocaleStringMap => {
   return { no: String(value) };
 };
 
+const normalizeLanguages = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return ['no'];
+  }
+  const next = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+  if (!next.length) {
+    return ['no'];
+  }
+  return Array.from(new Set(next));
+};
+
 const buildDuplicateTitle = (course: Course | null) => {
   if (!course) return '';
   const baseTitle = getLocaleValue(course.title).trim();
@@ -144,6 +158,7 @@ export default function CourseManager() {
         title: { no: values.title.trim() },
         description: { no: (values.description ?? '').trim() },
         status: values.status,
+        languages: ['no'],
         ...expirationFields,
       };
       const id = await createCourse(payload);
@@ -197,10 +212,12 @@ export default function CourseManager() {
         ...normalizeLocaleMap(sourceData.title),
         no: trimmedTitle,
       };
+      const nextLanguages = normalizeLanguages(sourceData.languages);
 
       const newCourseRef = await addDoc(collection(db, 'courses'), {
         ...sourceData,
         title: nextTitle,
+        languages: nextLanguages,
         companyId,
         createdById: profile.id,
         createdAt: serverTimestamp(),

@@ -378,15 +378,22 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   useEffect(() => {
     if (!course) return;
-    const mergedLanguages = Array.from(
-      new Set([
-        ...DEFAULT_LANGUAGES,
-        ...Object.keys(course.title ?? {}),
-        ...Object.keys(course.description ?? {}),
-        ...languages,
-      ]),
-    );
-    setLanguages(mergedLanguages);
+    const isFirstLoad = initializedCourseIdRef.current !== course.id;
+    if (isFirstLoad) {
+      initializedCourseIdRef.current = course.id;
+      const nextLangs = course.languages?.length
+        ? course.languages
+        : Array.from(
+            new Set([
+              ...DEFAULT_LANGUAGES,
+              ...Object.keys(course.title ?? {}),
+              ...Object.keys(course.description ?? {}),
+            ]),
+          );
+      setLanguages(nextLangs);
+    } else if (course.languages?.length) {
+      setLanguages(course.languages);
+    }
     form.reset({
       title: course.title,
       description: course.description ?? { no: '' },
@@ -402,6 +409,8 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const [languageInput, setLanguageInput] = useState('');
   const languageInputRef = useRef<HTMLInputElement | null>(null);
+  const initializedCourseIdRef = useRef<string | null>(null);
+  const hasDiscoveredModuleLanguages = useRef(false);
   const [savingCourseInfo, setSavingCourseInfo] = useState(false);
   const statusValue = form.watch('status') ?? 'inactive';
   const expirationType = form.watch('expirationType') ?? 'none';
@@ -410,7 +419,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
-    const discovered = new Set(DEFAULT_LANGUAGES);
+    setCourseImageUrl(course?.courseImageUrl ?? null);
+    if (course?.languages?.length || hasDiscoveredModuleLanguages.current) return;
+    const discovered = new Set<string>();
     modules.forEach((module) => {
       Object.keys(module.body ?? {}).forEach((lang) => discovered.add(lang));
       module.questions.forEach((question) => {
@@ -423,11 +434,10 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         });
       });
     });
-    setLanguages((prev) => {
-      const union = new Set([...prev, ...discovered]);
-      return Array.from(union);
-    });
-    setCourseImageUrl(course?.courseImageUrl ?? null);
+    if (discovered.size) {
+      hasDiscoveredModuleLanguages.current = true;
+      setLanguages((prev) => Array.from(new Set([...prev, ...discovered])));
+    }
   }, [modules, course]);
 
   useEffect(() => {
@@ -561,6 +571,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         imageUrls: imageMap,
         order: nextOrder,
         questions,
+        languages: targetLanguages,
         moduleType: isExamModule ? 'exam' : 'normal',
         ...(isExamModule ? { examPassPercentage: sanitizedPassPercentage } : {}),
       };
@@ -638,6 +649,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
       const nextTitle = { ...(duplicateTarget.title ?? {}) };
       nextTitle.no = trimmedTitle;
+      const nextLanguages = Array.isArray(duplicateTarget.languages)
+        ? duplicateTarget.languages
+        : Object.keys(nextTitle);
 
       const payload: CourseModulePayload = {
         title: nextTitle,
@@ -648,6 +662,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         imageUrls: duplicateTarget.imageUrls ?? {},
         order: maxOrder + 1,
         questions: duplicateTarget.questions ?? [],
+        languages: nextLanguages,
         moduleType: duplicateTarget.moduleType ?? 'normal',
         ...(duplicateTarget.moduleType === 'exam' &&
         typeof duplicateTarget.examPassPercentage === 'number'
@@ -703,7 +718,35 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       ensureCourseLocales(form.getValues('description')),
       { shouldDirty: true },
     );
+  };
 
+  const removeLanguage = (lang: string) => {
+    if (languages.length <= 1) return;
+    const nextLanguages = languages.filter((l) => l !== lang);
+    setLanguages(nextLanguages);
+    if (activeLanguage === lang) {
+      setActiveLanguage(nextLanguages[0]);
+    }
+    const stripKey = (map: LocaleStringMap | undefined): LocaleStringMap => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    form.setValue('title', stripKey(form.getValues('title')), { shouldDirty: true });
+    form.setValue('description', stripKey(form.getValues('description')), { shouldDirty: true });
+  };
+
+  const handleRemoveActiveLanguage = () => {
+    if (languages.length <= 1) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Fjern spraket ${activeLanguage.toUpperCase()} fra kurset?`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    removeLanguage(activeLanguage);
   };
 
   const handleCourseInfoSave = form.handleSubmit(async (values) => {
@@ -760,6 +803,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         description: normalizedDescription,
         courseImageUrl: courseImageUrl ?? null,
         status: values.status,
+        languages,
         ...expirationPayload,
         updatedAt: serverTimestamp(),
       });
@@ -936,17 +980,29 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setIsAddingLanguage(true);
-                setLanguageInput('');
-              }}
-              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              aria-label="Legg til språk"
-            >
-              +
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(true);
+                  setLanguageInput('');
+                }}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Legg til språk"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveActiveLanguage}
+                disabled={languages.length <= 1}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
+                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+              >
+                -
+              </button>
+            </>
           )}
         </div>
         <label

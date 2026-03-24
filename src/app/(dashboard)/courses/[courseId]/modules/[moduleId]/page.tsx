@@ -157,7 +157,7 @@ const getLocaleValue = (map: LocaleStringMap | undefined, lang = 'no') => {
 const collectLanguagesFromModule = (
   module: CourseModulePayload,
 ): string[] => {
-  const collected = new Set<string>(DEFAULT_LANGUAGES);
+  const collected = new Set<string>();
   Object.keys(module.title ?? {}).forEach((lang) => collected.add(lang));
   Object.keys(module.summary ?? {}).forEach((lang) => collected.add(lang));
   Object.keys(module.body ?? {}).forEach((lang) => collected.add(lang));
@@ -173,6 +173,7 @@ const collectLanguagesFromModule = (
       Object.keys(alt.altText ?? {}).forEach((lang) => collected.add(lang));
     });
   });
+  if (!collected.size) collected.add('no');
   return Array.from(collected);
 };
 
@@ -193,6 +194,11 @@ export default function CourseModuleDetailPage() {
   const [draft, setDraft] = useState<CourseModulePayload | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isAddingLanguage, setIsAddingLanguage] = useState(false);
+  const [languageInput, setLanguageInput] = useState('');
+  const languageInputRef = useRef<HTMLInputElement | null>(null);
+  const initializedModuleIdRef = useRef<string | null>(null);
+  const languageScrollRestoreRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!module) {
@@ -219,27 +225,41 @@ export default function CourseModuleDetailPage() {
       examPassPercentage,
     };
 
-    const discoveredLanguages = collectLanguagesFromModule(provisionalDraft);
-    setLanguages(discoveredLanguages);
-    if (!discoveredLanguages.includes(activeLanguage)) {
-      setActiveLanguage(discoveredLanguages[0] ?? 'no');
+    const isFirstLoad = initializedModuleIdRef.current !== moduleId;
+    let nextLanguages: string[];
+    if (module.languages?.length) {
+      nextLanguages = module.languages;
+    } else if (isFirstLoad) {
+      const discovered = collectLanguagesFromModule(provisionalDraft);
+      nextLanguages = Array.from(new Set([...DEFAULT_LANGUAGES, ...discovered]));
+    } else {
+      nextLanguages = collectLanguagesFromModule(provisionalDraft);
+    }
+
+    if (isFirstLoad) {
+      initializedModuleIdRef.current = moduleId;
+    }
+
+    setLanguages(nextLanguages);
+    if (!nextLanguages.includes(activeLanguage)) {
+      setActiveLanguage(nextLanguages[0] ?? 'no');
     }
 
     setDraft({
       ...provisionalDraft,
-      title: ensureLocaleKeys(provisionalDraft.title, discoveredLanguages),
-      summary: ensureLocaleKeys(provisionalDraft.summary, discoveredLanguages),
-      body: ensureLocaleKeys(provisionalDraft.body, discoveredLanguages),
-      media: ensureMediaLocales(provisionalDraft.media, discoveredLanguages),
-      videoUrls: ensureLocaleArrayKeys(provisionalDraft.videoUrls, discoveredLanguages),
-      imageUrls: ensureLocaleArrayKeys(provisionalDraft.imageUrls, discoveredLanguages),
+      title: ensureLocaleKeys(provisionalDraft.title, nextLanguages),
+      summary: ensureLocaleKeys(provisionalDraft.summary, nextLanguages),
+      body: ensureLocaleKeys(provisionalDraft.body, nextLanguages),
+      media: ensureMediaLocales(provisionalDraft.media, nextLanguages),
+      videoUrls: ensureLocaleArrayKeys(provisionalDraft.videoUrls, nextLanguages),
+      imageUrls: ensureLocaleArrayKeys(provisionalDraft.imageUrls, nextLanguages),
       questions: provisionalDraft.questions.map((question) => ({
         ...question,
-        title: ensureLocaleKeys(question.title, discoveredLanguages),
-        contentText: ensureLocaleKeys(question.contentText, discoveredLanguages),
+        title: ensureLocaleKeys(question.title, nextLanguages),
+        contentText: ensureLocaleKeys(question.contentText, nextLanguages),
         alternatives: question.alternatives.map((alt) => ({
           ...alt,
-          altText: ensureLocaleKeys(alt.altText, discoveredLanguages),
+          altText: ensureLocaleKeys(alt.altText, nextLanguages),
         })),
       })),
     });
@@ -253,6 +273,16 @@ export default function CourseModuleDetailPage() {
     return getLocaleValue(moduleTitle, activeLanguage) || (moduleId ?? '');
   }, [moduleTitle, activeLanguage, moduleId]);
 
+  const handleLanguageSelect = (lang: string) => {
+    if (lang === activeLanguage) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      languageScrollRestoreRef.current = window.scrollY;
+    }
+    setActiveLanguage(lang);
+  };
+
   const addLanguage = (lang: string) => {
     const trimmed = lang.trim().toLowerCase();
     if (!trimmed) return;
@@ -264,6 +294,8 @@ export default function CourseModuleDetailPage() {
     const nextLanguages = [...languages, trimmed];
     setLanguages(nextLanguages);
     setActiveLanguage(trimmed);
+    setLanguageInput('');
+    setIsAddingLanguage(false);
     setDraft((prev) =>
       prev
         ? {
@@ -287,6 +319,83 @@ export default function CourseModuleDetailPage() {
         : prev,
     );
   };
+
+  const removeLanguage = (lang: string) => {
+    if (languages.length <= 1) return;
+    const nextLanguages = languages.filter((l) => l !== lang);
+    setLanguages(nextLanguages);
+    if (activeLanguage === lang) {
+      setActiveLanguage(nextLanguages[0]);
+    }
+    const stripKey = (map: LocaleStringMap | undefined): LocaleStringMap => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    const stripArrayKey = (map: Record<string, string[]> | undefined): Record<string, string[]> => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            title: stripKey(prev.title),
+            summary: stripKey(prev.summary),
+            body: stripKey(prev.body),
+            media: (() => {
+              const next = { ...(prev.media ?? {}) };
+              delete next[lang];
+              return next;
+            })(),
+            videoUrls: stripArrayKey(prev.videoUrls as Record<string, string[]>),
+            imageUrls: stripArrayKey(prev.imageUrls as Record<string, string[]>),
+            questions: prev.questions.map((question) => ({
+              ...question,
+              title: stripKey(question.title),
+              contentText: stripKey(question.contentText),
+              alternatives: question.alternatives.map((alt) => ({
+                ...alt,
+                altText: stripKey(alt.altText),
+              })),
+            })),
+          }
+        : prev,
+    );
+  };
+
+  const handleRemoveActiveLanguage = () => {
+    if (languages.length <= 1) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Fjern spraket ${activeLanguage.toUpperCase()} fra emnet?`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    removeLanguage(activeLanguage);
+  };
+
+  useEffect(() => {
+    if (isAddingLanguage) {
+      requestAnimationFrame(() => {
+        languageInputRef.current?.focus();
+      });
+    }
+  }, [isAddingLanguage]);
+
+  useEffect(() => {
+    const top = languageScrollRestoreRef.current;
+    if (top == null || typeof window === 'undefined') {
+      return;
+    }
+    languageScrollRestoreRef.current = null;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top, behavior: 'auto' });
+    });
+  }, [activeLanguage]);
 
   const updateField = <K extends keyof CourseModulePayload>(
     key: K,
@@ -312,6 +421,7 @@ export default function CourseModuleDetailPage() {
         order: draft.order ?? 0,
         questions: draft.questions ?? [],
         moduleType: draft.moduleType ?? 'normal',
+        languages,
         updatedAt: serverTimestamp(),
       };
       if (draft.moduleType === 'exam') {
@@ -403,7 +513,7 @@ export default function CourseModuleDetailPage() {
             <button
               key={lang}
               type="button"
-              onClick={() => setActiveLanguage(lang)}
+              onClick={() => handleLanguageSelect(lang)}
               className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeLanguage === lang
                   ? 'bg-slate-900 text-white shadow-sm'
@@ -413,16 +523,64 @@ export default function CourseModuleDetailPage() {
               {lang.toUpperCase()}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              const next = prompt('Legg til språk (f.eks. sv)');
-              if (next) addLanguage(next);
-            }}
-            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            +
-          </button>
+          {isAddingLanguage ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addLanguage(languageInput);
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                ref={languageInputRef}
+                value={languageInput}
+                onChange={(e) => setLanguageInput(e.target.value)}
+                placeholder="Språkkode"
+                className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Legg til
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(false);
+                  setLanguageInput('');
+                }}
+                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Avbryt"
+              >
+                ×
+              </button>
+            </form>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(true);
+                  setLanguageInput('');
+                }}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Legg til språk"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveActiveLanguage}
+                disabled={languages.length <= 1}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
+                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+              >
+                -
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -28,6 +28,20 @@ const normalizeNumber = (value: unknown) =>
 const normalizeDate = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value : undefined;
 
+const normalizeLanguages = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const next = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+  if (!next.length) {
+    return undefined;
+  }
+  return Array.from(new Set(next));
+};
+
 interface UseCourseState {
   course: Course | null;
   loading: boolean;
@@ -64,6 +78,7 @@ export const useCourse = (courseId: string | null): UseCourseState => {
             description: normalizeLocaleMap(data.description),
             courseImageUrl: data.courseImageUrl ?? null,
             status: data.status ?? 'inactive',
+            languages: normalizeLanguages(data.languages),
             expirationType: normalizeExpirationType(data.expirationType),
             expirationDays: normalizeNumber(data.expirationDays),
             expirationMonths: normalizeNumber(data.expirationMonths),

@@ -53,6 +53,20 @@ const normalizeLocaleArrayMap = (value: unknown): LocaleStringArrayMap => {
 const normalizeModuleType = (value: unknown): CourseModuleType =>
   value === 'exam' ? 'exam' : 'normal';
 
+const normalizeLanguages = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const next = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+  if (!next.length) {
+    return undefined;
+  }
+  return Array.from(new Set(next));
+};
+
 const normalizeQuestion = (question: CourseQuestion): CourseQuestion => {
   const alternatives = Array.isArray(question.alternatives)
     ? question.alternatives
@@ -132,6 +146,7 @@ export const useCourseModule = (
             questions: Array.isArray(data.questions)
               ? (data.questions as CourseQuestion[]).map(normalizeQuestion)
               : [],
+            languages: normalizeLanguages(data.languages),
             moduleType,
             examPassPercentage,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
