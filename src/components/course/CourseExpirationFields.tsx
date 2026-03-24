@@ -1,3 +1,4 @@
+import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 
 type ExpirationType = 'none' | 'days' | 'months' | 'date';
@@ -34,15 +35,16 @@ export default function CourseExpirationFields<
       <div className="mt-3 flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
           Type
-          <select
+          <SelectWithToggleIcon
             {...form.register('expirationType' as Path<T>)}
-            className="cursor-pointer w-fit min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            wrapperClassName="w-fit min-w-48"
+            className="cursor-pointer w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <option value="none">Ingen utløp</option>
             <option value="days">Antall dager</option>
             <option value="months">Antall måneder</option>
             <option value="date">Dato</option>
-          </select>
+          </SelectWithToggleIcon>
         </label>
 
         {(expirationType === 'days' || expirationType === 'months') && (

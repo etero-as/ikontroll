@@ -45,6 +45,7 @@ import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DuplicateButton from '@/components/DuplicateButton';
 import DragHandle from '@/components/DragHandle';
+import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
 import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
 import {
@@ -953,7 +954,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           className="flex items-center gap-2 text-sm font-medium text-slate-700"
         >
           <span>Status</span>
-          <select
+          <SelectWithToggleIcon
             id="course-status-select"
             value={statusValue}
             onChange={handleStatusChange}
@@ -961,7 +962,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           >
             <option value="active">Aktiv</option>
             <option value="inactive">Inaktiv</option>
-          </select>
+          </SelectWithToggleIcon>
         </label>
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
