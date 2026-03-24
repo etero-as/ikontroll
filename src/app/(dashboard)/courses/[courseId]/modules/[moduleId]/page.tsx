@@ -24,6 +24,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   deleteDoc,
   doc,
@@ -35,7 +36,8 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { db, storage } from '@/lib/firebase';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
-import DragHandle from '@/components/DragHandle';
+import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
+import DuplicateButton from '@/components/DuplicateButton';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -389,13 +391,16 @@ export default function CourseModuleDetailPage() {
             href={`/courses/${courseId}`}
             className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kurs
+            ← Tilbake til kurset
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Emneadministrasjon
           </p>
         </div>
-        <div className="flex items-center gap-2">
+      </div>
+
+      <div className="flex min-h-18 flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
           {languages.map((lang) => (
             <button
               key={lang}
@@ -426,6 +431,9 @@ export default function CourseModuleDetailPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Emneinformasjon
+            </p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {fallbackTitle || 'Emne'}
             </h1>
@@ -437,41 +445,52 @@ export default function CourseModuleDetailPage() {
             onClick={handleDelete}
             className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett emne
+            Fjern emne
           </button>
         </div>
 
         <div className="mt-6 space-y-6">
-          <LocaleFieldEditor
-            label="Emnetittel"
-            value={draft.title ?? {}}
-            onChange={(next) => updateField('title', next)}
-            activeLanguage={activeLanguage}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <LocaleFieldEditor
+                  label="Tittel"
+                  value={draft.title ?? {}}
+                  onChange={(next) => updateField('title', next)}
+                  activeLanguage={activeLanguage}
+                  variant="courseInfo"
+                />
 
-          <LocaleFieldEditor
-            label="Sammendrag"
-            value={draft.summary ?? {}}
-            onChange={(next) => updateField('summary', next)}
-            activeLanguage={activeLanguage}
-            multiline
-          />
+                <LocaleFieldEditor
+                  label="Beskrivelse"
+                  value={draft.summary ?? {}}
+                  onChange={(next) => updateField('summary', next)}
+                  activeLanguage={activeLanguage}
+                  multiline
+                  variant="courseInfo"
+                  containerClassName="md:col-span-2"
+                />
+              </div>
 
-          <LocaleRichEditor
-            label="Innhold"
-            value={draft.body ?? {}}
-            onChange={(next) => updateField('body', next)}
-            activeLanguage={activeLanguage}
-          />
+              <LocaleRichEditor
+                label="Innhold"
+                value={draft.body ?? {}}
+                onChange={(next) => updateField('body', next)}
+                activeLanguage={activeLanguage}
+              />
+            </div>
+          </div>
 
-          <LocaleMediaEditor
-            label="Media"
-            media={draft.media ?? {}}
-            onChange={(next) => updateField('media', next)}
-            activeLanguage={activeLanguage}
-            courseId={courseId}
-            moduleId={moduleId}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <LocaleMediaEditor
+              label="Media"
+              media={draft.media ?? {}}
+              onChange={(next) => updateField('media', next)}
+              activeLanguage={activeLanguage}
+              courseId={courseId}
+              moduleId={moduleId}
+            />
+          </div>
 
           {draft.moduleType === 'exam' && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -504,13 +523,6 @@ export default function CourseModuleDetailPage() {
               </div>
             </div>
           )}
-
-          <QuestionListEditor
-            questions={draft.questions}
-            onChange={(next) => updateField('questions', next)}
-            languages={languages}
-            activeLanguage={activeLanguage}
-          />
         </div>
 
         {formError && (
@@ -521,19 +533,36 @@ export default function CourseModuleDetailPage() {
 
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
-            onClick={() => router.push(`/courses/${courseId}`)}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            type="button"
-          >
-            Avbryt
-          </button>
-          <button
             onClick={handlePreview}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             type="button"
           >
             Forhåndsvis
           </button>
+          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-b border-slate-100 pb-4">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Kontrollspørsmål
+          </p>
+          <p className="text-sm text-slate-500">
+            Spørsmål som stilles til kursdeltakeren etter at emnet er gjennomgått.
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <QuestionListEditor
+            questions={draft.questions}
+            onChange={(next) => updateField('questions', next)}
+            languages={languages}
+            activeLanguage={activeLanguage}
+          />
+        </div>
+
+        <div className="mt-6 flex items-center justify-end">
           <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
         </div>
       </div>
@@ -547,12 +576,16 @@ const LocaleFieldEditor = ({
   onChange,
   activeLanguage,
   multiline,
+  variant = 'default',
+  containerClassName,
 }: {
   label: string;
   value: LocaleStringMap;
   onChange: (next: LocaleStringMap) => void;
   activeLanguage: string;
   multiline?: boolean;
+  variant?: 'default' | 'courseInfo';
+  containerClassName?: string;
 }) => {
   const currentValue = value?.[activeLanguage] ?? '';
 
@@ -562,28 +595,46 @@ const LocaleFieldEditor = ({
     onChange(next);
   };
 
+  const field = multiline ? (
+    <textarea
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      rows={4}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  ) : (
+    <input
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  );
+
+  if (variant === 'courseInfo') {
+    return (
+      <label
+        className={`${containerClassName ? `${containerClassName} ` : ''}flex flex-col gap-1 text-sm font-medium text-slate-700`}
+      >
+        <span className="flex items-center justify-between">
+          <span>{label}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {activeLanguage.toUpperCase()}
+          </span>
+        </span>
+        {field}
+      </label>
+    );
+  }
+
   return (
-    <div className="space-y-2">
+    <div className={`${containerClassName ? `${containerClassName} ` : ''}space-y-2`}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">{label}</p>
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {activeLanguage.toUpperCase()}
         </span>
       </div>
-      {multiline ? (
-        <textarea
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          rows={4}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      ) : (
-        <input
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      )}
+      {field}
     </div>
   );
 };
@@ -715,7 +766,7 @@ const QuillEditor = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div ref={containerRef} />
       {showTableActions &&
         tableActionsHost &&
@@ -1153,7 +1204,9 @@ const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
   return (
     <div className="space-y-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl ring-2 ring-slate-300 cursor-grabbing opacity-95">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700">⇅</span>
+        <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400">
+          <DragHandleIcon />
+        </span>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
           {typeLabel}
         </span>
@@ -1300,6 +1353,8 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
+  const [minimizedIds, setMinimizedIds] = useState<Set<string>>(new Set());
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -1317,7 +1372,66 @@ const QuestionListEditor = ({
   };
 
   const removeQuestion = (index: number) => {
+    const removed = questions[index];
+    if (removed) {
+      setMinimizedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(removed.id);
+        return next;
+      });
+    }
     onChange(questions.filter((_, idx) => idx !== index));
+  };
+
+  const duplicateQuestion = (index: number) => {
+    const source = questions[index];
+    if (!source) {
+      return;
+    }
+
+    const alternativeIdMap = new Map<string, string>();
+    const duplicatedAlternatives = source.alternatives.map((alternative) => {
+      const duplicatedId = generateId();
+      alternativeIdMap.set(alternative.id, duplicatedId);
+      return {
+        ...alternative,
+        id: duplicatedId,
+        altText: { ...(alternative.altText ?? {}) },
+      };
+    });
+
+    const sourceCorrectIds = Array.isArray(source.correctAnswerIds)
+      ? source.correctAnswerIds
+      : source.correctAnswerId
+        ? [source.correctAnswerId]
+        : [];
+
+    const duplicatedCorrectIds = sourceCorrectIds
+      .map((id) => alternativeIdMap.get(id) ?? id)
+      .filter((id, idx, arr) => arr.indexOf(id) === idx)
+      .filter((id) => duplicatedAlternatives.some((alternative) => alternative.id === id));
+
+    const fallbackCorrectId = duplicatedAlternatives[0]?.id;
+    const nextCorrectIds =
+      duplicatedCorrectIds.length > 0
+        ? duplicatedCorrectIds
+        : fallbackCorrectId
+          ? [fallbackCorrectId]
+          : [];
+
+    const duplicatedQuestion: CourseQuestion = {
+      ...source,
+      id: generateId(),
+      title: { ...(source.title ?? {}) },
+      contentText: { ...(source.contentText ?? {}) },
+      alternatives: duplicatedAlternatives,
+      correctAnswerIds: nextCorrectIds,
+      correctAnswerId: nextCorrectIds[0],
+    };
+
+    const next = [...questions];
+    next.splice(index + 1, 0, duplicatedQuestion);
+    onChange(next);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1332,19 +1446,55 @@ const QuestionListEditor = ({
     onChange(arrayMove(questions, oldIndex, newIndex));
   };
 
+  const toggleMinimized = (id: string) => {
+    setMinimizedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allMinimized = questions.length > 0 && questions.every((q) => minimizedIds.has(q.id));
+
+  const handleToggleAll = () => {
+    if (allMinimized) {
+      setMinimizedIds(new Set());
+    } else {
+      setMinimizedIds(new Set(questions.map((q) => q.id)));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">
-          Kontrollspørsmål ({questions.length})
+          Kontrollspørsmål{' '}
+          <span className="font-normal text-slate-500">
+            ({questions.length} {questions.length === 1 ? 'spørsmål' : 'spørsmål'})
+          </span>
         </p>
-        <button
-          type="button"
-          onClick={addQuestion}
-          className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-        >
-          Legg til spørsmål
-        </button>
+        <div className="flex items-center gap-2">
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            >
+              {allMinimized ? 'Vis alle spørsmål' : 'Skjul alle spørsmål'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+          >
+            Legg til spørsmål
+          </button>
+        </div>
       </div>
       {questions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
@@ -1364,9 +1514,12 @@ const QuestionListEditor = ({
                   index={index}
                   question={question}
                   onChange={(next) => updateQuestion(index, next)}
+                  onDuplicate={() => duplicateQuestion(index)}
                   onRemove={() => removeQuestion(index)}
                   languages={languages}
                   activeLanguage={activeLanguage}
+                  isMinimized={minimizedIds.has(question.id)}
+                  onToggleMinimized={() => toggleMinimized(question.id)}
                 />
               ))}
             </div>
@@ -1381,24 +1534,30 @@ const SortableQuestionEditor = ({
   id,
   question,
   onChange,
+  onDuplicate,
   onRemove,
   languages,
   activeLanguage,
   index,
+  isMinimized,
+  onToggleMinimized,
 }: {
   id: UniqueIdentifier;
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   languages: string[];
   activeLanguage: string;
   index: number;
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
   const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.75 : 1,
   };
@@ -1409,10 +1568,13 @@ const SortableQuestionEditor = ({
         index={index}
         question={question}
         onChange={onChange}
+        onDuplicate={onDuplicate}
         onRemove={onRemove}
         languages={languages}
         activeLanguage={activeLanguage}
         dragHandleProps={{ attributes, listeners }}
+        isMinimized={isMinimized}
+        onToggleMinimized={onToggleMinimized}
       />
     </div>
   );
@@ -1456,16 +1618,7 @@ const SortableQuestionAlternative = ({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 cursor-grab active:cursor-grabbing"
-            aria-label="Endre rekkefølge"
-            title="Endre rekkefølge"
-          >
-            ⇅
-          </button>
+          <DragHandle attributes={attributes} listeners={listeners} />
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Alternativ {idx + 1}
           </p>
@@ -1485,7 +1638,7 @@ const SortableQuestionAlternative = ({
               onClick={() => onRemove(alternative.id)}
               className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
-              Fjern
+              Fjern alternativ
             </button>
           )}
         </div>
@@ -1509,14 +1662,18 @@ type DragHandleProps = {
 const QuestionEditor = ({
   question,
   onChange,
+  onDuplicate,
   onRemove,
   languages,
   activeLanguage,
   index,
   dragHandleProps,
+  isMinimized,
+  onToggleMinimized,
 }: {
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   languages: string[];
   activeLanguage: string;
@@ -1525,6 +1682,8 @@ const QuestionEditor = ({
     attributes: DragHandleProps['attributes'];
     listeners: DragHandleProps['listeners'];
   };
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
 }) => {
   const alternativeSensors = useSensors(
     useSensor(PointerSensor, {
@@ -1611,8 +1770,11 @@ const QuestionEditor = ({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between">
+    <div
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className={`flex items-start justify-between p-4 hover:bg-slate-100 ${isMinimized ? 'rounded-2xl' : 'rounded-t-2xl'}`}>
         <div className="flex items-start gap-2">
           {dragHandleProps && (
             <DragHandle
@@ -1622,70 +1784,94 @@ const QuestionEditor = ({
             />
           )}
           <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Spørsmål #{index + 1}
-          </p>
-          <p className="text-xs text-slate-500">
-            {question.alternatives.length} alternativer
-          </p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Spørsmål #{index + 1}
+            </p>
+            <p className="text-xs text-slate-500">
+              {question.alternatives.length} alternativer
+            </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-        >
-          Fjern spørsmål
-        </button>
-      </div>
-
-      <div className="mt-4 space-y-4">
-        <LocaleFieldEditor
-          label="Spørsmålstekst"
-          value={question.contentText}
-          onChange={(next) => updateLocaleField('contentText', next)}
-          activeLanguage={activeLanguage}
-          multiline
-        />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
-            <button
-              type="button"
-              onClick={addAlternative}
-              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til alternativ
-            </button>
-          </div>
-
-          <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
-            <SortableContext
-              items={question.alternatives.map((alternative) => alternative.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-3">
-                {question.alternatives.map((alternative, idx) => (
-                  <SortableQuestionAlternative
-                    key={alternative.id}
-                    id={alternative.id}
-                    alternative={alternative}
-                    idx={idx}
-                    question={question}
-                    currentCorrectIds={currentCorrectIds}
-                    onToggleCorrect={toggleCorrectAnswer}
-                    onRemove={removeAlternative}
-                    onUpdate={updateAlternative}
-                    activeLanguage={activeLanguage}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMinimized}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+            title={isMinimized ? 'Vis detaljer' : 'Skjul detaljer'}
+          >
+            {isMinimized ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+          <DuplicateButton
+            onClick={onDuplicate}
+            className="ml-2"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+          >
+            Fjern spørsmål
+          </button>
         </div>
       </div>
+
+      {/* Collapsible body */}
+      {!isMinimized && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-4 space-y-4">
+          <LocaleFieldEditor
+            label="Spørsmålstekst"
+            value={question.contentText}
+            onChange={(next) => updateLocaleField('contentText', next)}
+            activeLanguage={activeLanguage}
+            multiline
+          />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
+              <button
+                type="button"
+                onClick={addAlternative}
+                className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              >
+                Legg til alternativ
+              </button>
+            </div>
+
+            <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
+              <SortableContext
+                items={question.alternatives.map((alternative) => alternative.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {question.alternatives.map((alternative, idx) => (
+                    <SortableQuestionAlternative
+                      key={alternative.id}
+                      id={alternative.id}
+                      alternative={alternative}
+                      idx={idx}
+                      question={question}
+                      currentCorrectIds={currentCorrectIds}
+                      onToggleCorrect={toggleCorrectAnswer}
+                      onRemove={removeAlternative}
+                      onUpdate={updateAlternative}
+                      activeLanguage={activeLanguage}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

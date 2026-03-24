@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
 } from 'react';
+import Link from 'next/link';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,6 +43,7 @@ import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DuplicateButton from '@/components/DuplicateButton';
 import DragHandle from '@/components/DragHandle';
 import { db, storage } from '@/lib/firebase';
 import {
@@ -161,13 +163,13 @@ const SortableModuleItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <DragHandle attributes={attributes} listeners={listeners} className="mt-1" />
           <div
-            className="flex-1 cursor-pointer rounded-xl border border-transparent px-1 py-0.5 transition hover:border-slate-200"
+            className="flex-1 cursor-pointer rounded-xl px-2 py-1 hover:bg-slate-100"
             onClick={() => onOpen(module.id)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -178,70 +180,36 @@ const SortableModuleItem = ({
             role="button"
             tabIndex={0}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h4 className="text-lg font-semibold text-slate-900">
-                  {getLocaleValue(module.title, activeLanguage) || 'Uten tittel'}
-                </h4>
-                {getLocaleValue(module.summary, activeLanguage) && (
-                  <p className="text-sm text-slate-500">
-                    {getLocaleValue(module.summary, activeLanguage)}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500">
-                  {module.questions.length} kontrollspørsmål
+            <div>
+              <h4 className="text-lg font-semibold text-slate-900">
+                {getLocaleValue(module.title, activeLanguage) || 'Uten tittel'}
+              </h4>
+              {getLocaleValue(module.summary, activeLanguage) && (
+                <p className="text-sm text-slate-500">
+                  {getLocaleValue(module.summary, activeLanguage)}
                 </p>
-                {isExamModule && (
-                  <p className="text-xs font-semibold text-indigo-600">
-                    Eksamen
-                    {typeof module.examPassPercentage === 'number'
-                      ? ` · Krav ${module.examPassPercentage}%`
-                      : ''}
-                  </p>
-                )}
-              </div>
-              <div className="mt-1 text-slate-500">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 15a3 3 0 1 0-3-3 3 3 0 0 0 3 3" />
-                  <path d="M19.4 15a2 2 0 0 0 .4 2l.1.1a1.999 1.999 0 1 1-2.83 2.83l-.1-.1a2 2 0 0 0-2-.4 2 2 0 0 0-1.4 1.9V21a2 2 0 0 1-4 0v-.2a2 2 0 0 0-1.4-1.9 2 2 0 0 0-2 .4l-.1.1a1.999 1.999 0 1 1-2.83-2.83l.1-.1a2 2 0 0 0 .4-2 2 2 0 0 0-1.9-1.4H3a2 2 0 0 1 0-4h.2a2 2 0 0 0 1.9-1.4 2 2 0 0 0-.4-2l-.1-.1a1.999 1.999 0 1 1 2.83-2.83l.1.1a2 2 0 0 0 2 .4 2 2 0 0 0 1.4-1.9V3a2 2 0 0 1 4 0v.2a2 2 0 0 0 1.4 1.9 2 2 0 0 0 2-.4l.1-.1a1.999 1.999 0 1 1 2.83 2.83l-.1.1a2 2 0 0 0-.4 2 2 2 0 0 0 1.9 1.4H21a2 2 0 0 1 0 4h-.2a2 2 0 0 0-1.9 1.4Z" />
-                </svg>
-              </div>
+              )}
+              <p className="text-xs text-slate-500">
+                {module.questions.length} kontrollspørsmål
+              </p>
+              {isExamModule && (
+                <p className="text-xs font-semibold text-indigo-600">
+                  Eksamen
+                  {typeof module.examPassPercentage === 'number'
+                    ? ` · Krav ${module.examPassPercentage}%`
+                    : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onDuplicate(module)}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-          >
-            Dupliser
-          </button>
+          <DuplicateButton onClick={() => onDuplicate(module)} />
           <button
             onClick={() => onDelete(module.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:border-red-300 hover:bg-red-50"
-            title="Slett emne"
-            aria-label="Slett emne"
+            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            >
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
+            Fjern emne
           </button>
         </div>
       </div>
@@ -926,7 +894,20 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/courses"
+            className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
+            ← Tilbake til kursoversikt
+          </Link>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Kursadministrasjon
+          </p>
+        </div>
+      </div>
+      <div className="flex min-h-18 flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {languages.map((lang) => (
             <button
@@ -1024,7 +1005,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             onClick={handleDeleteCourse}
             className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett kurs
+            Fjern kurs
           </button>
         </div>
 
@@ -1213,7 +1194,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border-b border-slate-100 px-2 pb-4 pt-1 hover:bg-slate-100 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Emner

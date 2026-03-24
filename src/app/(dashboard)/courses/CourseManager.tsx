@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import DuplicateButton from '@/components/DuplicateButton';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import {
@@ -335,15 +336,13 @@ export default function CourseManager() {
                         >
                           Administrer
                         </Link>
-                        <button
+                        <DuplicateButton
                           onClick={() => {
                             setDuplicateError(null);
                             setDuplicateTarget(course);
                           }}
-                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          Dupliser
-                        </button>
+                          className="inline-flex appearance-none items-center cursor-pointer leading-normal font-sans"
+                        />
                         <button
                           onClick={() => handleDeleteCourse(course)}
                           className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-red-600 hover:border-red-300 hover:bg-red-50"
