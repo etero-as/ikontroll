@@ -942,7 +942,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 setIsAddingLanguage(true);
                 setLanguageInput('');
               }}
-              className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               aria-label="Legg til språk"
             >
               +

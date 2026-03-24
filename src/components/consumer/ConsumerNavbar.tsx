@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getPreferredLocale } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
+import { AppHeader } from '@/components/AppHeader';
 
 const ConsumerNavbar = () => {
   const {
@@ -41,8 +42,8 @@ const ConsumerNavbar = () => {
   return (
     <>
       {/* Desktop/Tablet Top Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 md:px-8">
+      <AppHeader className="shadow-sm">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-8">
             <Link href="/my-courses" className="text-xl font-bold text-slate-900">
               IKontroll
@@ -113,7 +114,7 @@ const ConsumerNavbar = () => {
             </button>
           </div>
         </div>
-      </header>
+      </AppHeader>
 
       {/* Mobile Slide-out Menu (Drawer - Right side) */}
       {isMenuOpen && (

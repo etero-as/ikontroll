@@ -389,7 +389,7 @@ export default function CourseModuleDetailPage() {
             href={`/courses/${courseId}`}
             className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kurset
+            ← Tilbake til kursadministrasjon
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Emneadministrasjon
@@ -419,7 +419,7 @@ export default function CourseModuleDetailPage() {
               const next = prompt('Legg til språk (f.eks. sv)');
               if (next) addLanguage(next);
             }}
-            className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             +
           </button>
