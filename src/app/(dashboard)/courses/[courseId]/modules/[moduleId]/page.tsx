@@ -445,41 +445,52 @@ export default function CourseModuleDetailPage() {
             onClick={handleDelete}
             className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett emne
+            Fjern emne
           </button>
         </div>
 
         <div className="mt-6 space-y-6">
-          <LocaleFieldEditor
-            label="Emnetittel"
-            value={draft.title ?? {}}
-            onChange={(next) => updateField('title', next)}
-            activeLanguage={activeLanguage}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <LocaleFieldEditor
+                  label="Tittel"
+                  value={draft.title ?? {}}
+                  onChange={(next) => updateField('title', next)}
+                  activeLanguage={activeLanguage}
+                  variant="courseInfo"
+                />
 
-          <LocaleFieldEditor
-            label="Sammendrag"
-            value={draft.summary ?? {}}
-            onChange={(next) => updateField('summary', next)}
-            activeLanguage={activeLanguage}
-            multiline
-          />
+                <LocaleFieldEditor
+                  label="Beskrivelse"
+                  value={draft.summary ?? {}}
+                  onChange={(next) => updateField('summary', next)}
+                  activeLanguage={activeLanguage}
+                  multiline
+                  variant="courseInfo"
+                  containerClassName="md:col-span-2"
+                />
+              </div>
 
-          <LocaleRichEditor
-            label="Innhold"
-            value={draft.body ?? {}}
-            onChange={(next) => updateField('body', next)}
-            activeLanguage={activeLanguage}
-          />
+              <LocaleRichEditor
+                label="Innhold"
+                value={draft.body ?? {}}
+                onChange={(next) => updateField('body', next)}
+                activeLanguage={activeLanguage}
+              />
+            </div>
+          </div>
 
-          <LocaleMediaEditor
-            label="Media"
-            media={draft.media ?? {}}
-            onChange={(next) => updateField('media', next)}
-            activeLanguage={activeLanguage}
-            courseId={courseId}
-            moduleId={moduleId}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <LocaleMediaEditor
+              label="Media"
+              media={draft.media ?? {}}
+              onChange={(next) => updateField('media', next)}
+              activeLanguage={activeLanguage}
+              courseId={courseId}
+              moduleId={moduleId}
+            />
+          </div>
 
           {draft.moduleType === 'exam' && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -512,13 +523,6 @@ export default function CourseModuleDetailPage() {
               </div>
             </div>
           )}
-
-          <QuestionListEditor
-            questions={draft.questions}
-            onChange={(next) => updateField('questions', next)}
-            languages={languages}
-            activeLanguage={activeLanguage}
-          />
         </div>
 
         {formError && (
@@ -529,19 +533,36 @@ export default function CourseModuleDetailPage() {
 
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
-            onClick={() => router.push(`/courses/${courseId}`)}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            type="button"
-          >
-            Avbryt
-          </button>
-          <button
             onClick={handlePreview}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             type="button"
           >
             Forhåndsvis
           </button>
+          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-b border-slate-100 pb-4">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Kontrollspørsmål
+          </p>
+          <p className="text-sm text-slate-500">
+            Spørsmål som stilles til kursdeltakeren etter at emnet er gjennomgått.
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <QuestionListEditor
+            questions={draft.questions}
+            onChange={(next) => updateField('questions', next)}
+            languages={languages}
+            activeLanguage={activeLanguage}
+          />
+        </div>
+
+        <div className="mt-6 flex items-center justify-end">
           <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
         </div>
       </div>
@@ -555,12 +576,16 @@ const LocaleFieldEditor = ({
   onChange,
   activeLanguage,
   multiline,
+  variant = 'default',
+  containerClassName,
 }: {
   label: string;
   value: LocaleStringMap;
   onChange: (next: LocaleStringMap) => void;
   activeLanguage: string;
   multiline?: boolean;
+  variant?: 'default' | 'courseInfo';
+  containerClassName?: string;
 }) => {
   const currentValue = value?.[activeLanguage] ?? '';
 
@@ -570,28 +595,46 @@ const LocaleFieldEditor = ({
     onChange(next);
   };
 
+  const field = multiline ? (
+    <textarea
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      rows={4}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  ) : (
+    <input
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  );
+
+  if (variant === 'courseInfo') {
+    return (
+      <label
+        className={`${containerClassName ? `${containerClassName} ` : ''}flex flex-col gap-1 text-sm font-medium text-slate-700`}
+      >
+        <span className="flex items-center justify-between">
+          <span>{label}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {activeLanguage.toUpperCase()}
+          </span>
+        </span>
+        {field}
+      </label>
+    );
+  }
+
   return (
-    <div className="space-y-2">
+    <div className={`${containerClassName ? `${containerClassName} ` : ''}space-y-2`}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">{label}</p>
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {activeLanguage.toUpperCase()}
         </span>
       </div>
-      {multiline ? (
-        <textarea
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          rows={4}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      ) : (
-        <input
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      )}
+      {field}
     </div>
   );
 };
@@ -723,7 +766,7 @@ const QuillEditor = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div ref={containerRef} />
       {showTableActions &&
         tableActionsHost &&

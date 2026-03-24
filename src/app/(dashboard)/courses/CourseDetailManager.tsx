@@ -1005,7 +1005,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             onClick={handleDeleteCourse}
             className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett kurs
+            Fjern kurs
           </button>
         </div>
 
