@@ -1533,7 +1533,7 @@ const SortableQuestionAlternative = ({
               onClick={() => onRemove(alternative.id)}
               className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
-              Fjern
+              Fjern alternativ
             </button>
           )}
         </div>
