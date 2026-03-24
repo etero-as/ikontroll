@@ -391,13 +391,16 @@ export default function CourseModuleDetailPage() {
             href={`/courses/${courseId}`}
             className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kurs
+            ← Tilbake til kurset
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Emneadministrasjon
           </p>
         </div>
-        <div className="flex items-center gap-2">
+      </div>
+
+      <div className="flex min-h-18 flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
           {languages.map((lang) => (
             <button
               key={lang}
@@ -428,6 +431,9 @@ export default function CourseModuleDetailPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Emneinformasjon
+            </p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {fallbackTitle || 'Emne'}
             </h1>
@@ -1826,4 +1832,3 @@ const QuestionEditor = ({
     </div>
   );
 };
-
