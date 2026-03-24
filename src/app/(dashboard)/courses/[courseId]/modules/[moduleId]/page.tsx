@@ -1303,6 +1303,8 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
+  const [minimizedIds, setMinimizedIds] = useState<Set<string>>(new Set());
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -1320,6 +1322,14 @@ const QuestionListEditor = ({
   };
 
   const removeQuestion = (index: number) => {
+    const removed = questions[index];
+    if (removed) {
+      setMinimizedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(removed.id);
+        return next;
+      });
+    }
     onChange(questions.filter((_, idx) => idx !== index));
   };
 
@@ -1335,19 +1345,55 @@ const QuestionListEditor = ({
     onChange(arrayMove(questions, oldIndex, newIndex));
   };
 
+  const toggleMinimized = (id: string) => {
+    setMinimizedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allMinimized = questions.length > 0 && questions.every((q) => minimizedIds.has(q.id));
+
+  const handleToggleAll = () => {
+    if (allMinimized) {
+      setMinimizedIds(new Set());
+    } else {
+      setMinimizedIds(new Set(questions.map((q) => q.id)));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">
-          Kontrollspørsmål ({questions.length})
+          Kontrollspørsmål{' '}
+          <span className="font-normal text-slate-500">
+            ({questions.length} {questions.length === 1 ? 'spørsmål' : 'spørsmål'})
+          </span>
         </p>
-        <button
-          type="button"
-          onClick={addQuestion}
-          className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-        >
-          Legg til spørsmål
-        </button>
+        <div className="flex items-center gap-2">
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            >
+              {allMinimized ? 'Vis alle spørsmål' : 'Skjul alle spørsmål'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+          >
+            Legg til spørsmål
+          </button>
+        </div>
       </div>
       {questions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
@@ -1370,6 +1416,8 @@ const QuestionListEditor = ({
                   onRemove={() => removeQuestion(index)}
                   languages={languages}
                   activeLanguage={activeLanguage}
+                  isMinimized={minimizedIds.has(question.id)}
+                  onToggleMinimized={() => toggleMinimized(question.id)}
                 />
               ))}
             </div>
@@ -1388,6 +1436,8 @@ const SortableQuestionEditor = ({
   languages,
   activeLanguage,
   index,
+  isMinimized,
+  onToggleMinimized,
 }: {
   id: UniqueIdentifier;
   question: CourseQuestion;
@@ -1396,6 +1446,8 @@ const SortableQuestionEditor = ({
   languages: string[];
   activeLanguage: string;
   index: number;
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -1416,6 +1468,8 @@ const SortableQuestionEditor = ({
         languages={languages}
         activeLanguage={activeLanguage}
         dragHandleProps={{ attributes, listeners }}
+        isMinimized={isMinimized}
+        onToggleMinimized={onToggleMinimized}
       />
     </div>
   );
@@ -1508,6 +1562,8 @@ const QuestionEditor = ({
   activeLanguage,
   index,
   dragHandleProps,
+  isMinimized,
+  onToggleMinimized,
 }: {
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
@@ -1519,6 +1575,8 @@ const QuestionEditor = ({
     attributes: DragHandleProps['attributes'];
     listeners: DragHandleProps['listeners'];
   };
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
 }) => {
   const alternativeSensors = useSensors(
     useSensor(PointerSensor, {
@@ -1605,8 +1663,11 @@ const QuestionEditor = ({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between">
+    <div
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between rounded-t-2xl p-4 hover:bg-slate-100">
         <div className="flex items-start gap-2">
           {dragHandleProps && (
             <DragHandle
@@ -1616,69 +1677,90 @@ const QuestionEditor = ({
             />
           )}
           <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Spørsmål #{index + 1}
-          </p>
-          <p className="text-xs text-slate-500">
-            {question.alternatives.length} alternativer
-          </p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Spørsmål #{index + 1}
+            </p>
+            <p className="text-xs text-slate-500">
+              {question.alternatives.length} alternativer
+            </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-        >
-          Fjern spørsmål
-        </button>
-      </div>
-
-      <div className="mt-4 space-y-4">
-        <LocaleFieldEditor
-          label="Spørsmålstekst"
-          value={question.contentText}
-          onChange={(next) => updateLocaleField('contentText', next)}
-          activeLanguage={activeLanguage}
-          multiline
-        />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
-            <button
-              type="button"
-              onClick={addAlternative}
-              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til alternativ
-            </button>
-          </div>
-
-          <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
-            <SortableContext
-              items={question.alternatives.map((alternative) => alternative.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-3">
-                {question.alternatives.map((alternative, idx) => (
-                  <SortableQuestionAlternative
-                    key={alternative.id}
-                    id={alternative.id}
-                    alternative={alternative}
-                    idx={idx}
-                    question={question}
-                    currentCorrectIds={currentCorrectIds}
-                    onToggleCorrect={toggleCorrectAnswer}
-                    onRemove={removeAlternative}
-                    onUpdate={updateAlternative}
-                    activeLanguage={activeLanguage}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMinimized}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+            title={isMinimized ? 'Vis detaljer' : 'Skjul detaljer'}
+          >
+            {isMinimized ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+          >
+            Fjern spørsmål
+          </button>
         </div>
       </div>
+
+      {/* Collapsible body */}
+      {!isMinimized && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-4 space-y-4">
+          <LocaleFieldEditor
+            label="Spørsmålstekst"
+            value={question.contentText}
+            onChange={(next) => updateLocaleField('contentText', next)}
+            activeLanguage={activeLanguage}
+            multiline
+          />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
+              <button
+                type="button"
+                onClick={addAlternative}
+                className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              >
+                Legg til alternativ
+              </button>
+            </div>
+
+            <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
+              <SortableContext
+                items={question.alternatives.map((alternative) => alternative.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {question.alternatives.map((alternative, idx) => (
+                    <SortableQuestionAlternative
+                      key={alternative.id}
+                      id={alternative.id}
+                      alternative={alternative}
+                      idx={idx}
+                      question={question}
+                      currentCorrectIds={currentCorrectIds}
+                      onToggleCorrect={toggleCorrectAnswer}
+                      onRemove={removeAlternative}
+                      onUpdate={updateAlternative}
+                      activeLanguage={activeLanguage}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
