@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
-
+env:
+  FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+  
 jobs:
   deploy:
     name: Build & Deploy
