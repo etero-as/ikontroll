@@ -35,6 +35,9 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-
+          
+      - name: Enable Firebase webframeworks experiment
+        run: firebase experiments:enable webframeworks
+          
       - name: Deploy to Firebase
         run: npx firebase-tools deploy --project internkontroll-8e12a --non-interactive
