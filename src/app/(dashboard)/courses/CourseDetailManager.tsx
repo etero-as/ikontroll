@@ -42,6 +42,7 @@ import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DuplicateButton from '@/components/DuplicateButton';
 import DragHandle from '@/components/DragHandle';
 import { db, storage } from '@/lib/firebase';
 import {
@@ -202,12 +203,7 @@ const SortableModuleItem = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onDuplicate(module)}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-          >
-            Dupliser
-          </button>
+          <DuplicateButton onClick={() => onDuplicate(module)} />
           <button
             onClick={() => onDelete(module.id)}
             className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"

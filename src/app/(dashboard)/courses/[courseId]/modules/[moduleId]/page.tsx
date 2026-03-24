@@ -37,6 +37,7 @@ import { db, storage } from '@/lib/firebase';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
+import DuplicateButton from '@/components/DuplicateButton';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -1333,6 +1334,57 @@ const QuestionListEditor = ({
     onChange(questions.filter((_, idx) => idx !== index));
   };
 
+  const duplicateQuestion = (index: number) => {
+    const source = questions[index];
+    if (!source) {
+      return;
+    }
+
+    const alternativeIdMap = new Map<string, string>();
+    const duplicatedAlternatives = source.alternatives.map((alternative) => {
+      const duplicatedId = generateId();
+      alternativeIdMap.set(alternative.id, duplicatedId);
+      return {
+        ...alternative,
+        id: duplicatedId,
+        altText: { ...(alternative.altText ?? {}) },
+      };
+    });
+
+    const sourceCorrectIds = Array.isArray(source.correctAnswerIds)
+      ? source.correctAnswerIds
+      : source.correctAnswerId
+        ? [source.correctAnswerId]
+        : [];
+
+    const duplicatedCorrectIds = sourceCorrectIds
+      .map((id) => alternativeIdMap.get(id) ?? id)
+      .filter((id, idx, arr) => arr.indexOf(id) === idx)
+      .filter((id) => duplicatedAlternatives.some((alternative) => alternative.id === id));
+
+    const fallbackCorrectId = duplicatedAlternatives[0]?.id;
+    const nextCorrectIds =
+      duplicatedCorrectIds.length > 0
+        ? duplicatedCorrectIds
+        : fallbackCorrectId
+          ? [fallbackCorrectId]
+          : [];
+
+    const duplicatedQuestion: CourseQuestion = {
+      ...source,
+      id: generateId(),
+      title: { ...(source.title ?? {}) },
+      contentText: { ...(source.contentText ?? {}) },
+      alternatives: duplicatedAlternatives,
+      correctAnswerIds: nextCorrectIds,
+      correctAnswerId: nextCorrectIds[0],
+    };
+
+    const next = [...questions];
+    next.splice(index + 1, 0, duplicatedQuestion);
+    onChange(next);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     if (!event.over || event.active.id === event.over.id) {
       return;
@@ -1413,6 +1465,7 @@ const QuestionListEditor = ({
                   index={index}
                   question={question}
                   onChange={(next) => updateQuestion(index, next)}
+                  onDuplicate={() => duplicateQuestion(index)}
                   onRemove={() => removeQuestion(index)}
                   languages={languages}
                   activeLanguage={activeLanguage}
@@ -1432,6 +1485,7 @@ const SortableQuestionEditor = ({
   id,
   question,
   onChange,
+  onDuplicate,
   onRemove,
   languages,
   activeLanguage,
@@ -1442,6 +1496,7 @@ const SortableQuestionEditor = ({
   id: UniqueIdentifier;
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   languages: string[];
   activeLanguage: string;
@@ -1464,6 +1519,7 @@ const SortableQuestionEditor = ({
         index={index}
         question={question}
         onChange={onChange}
+        onDuplicate={onDuplicate}
         onRemove={onRemove}
         languages={languages}
         activeLanguage={activeLanguage}
@@ -1557,6 +1613,7 @@ type DragHandleProps = {
 const QuestionEditor = ({
   question,
   onChange,
+  onDuplicate,
   onRemove,
   languages,
   activeLanguage,
@@ -1567,6 +1624,7 @@ const QuestionEditor = ({
 }: {
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   languages: string[];
   activeLanguage: string;
@@ -1667,7 +1725,7 @@ const QuestionEditor = ({
       className="rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
       {/* Header */}
-      <div className="flex items-start justify-between rounded-t-2xl p-4 hover:bg-slate-100">
+      <div className={`flex items-start justify-between p-4 hover:bg-slate-100 ${isMinimized ? 'rounded-2xl' : 'rounded-t-2xl'}`}>
         <div className="flex items-start gap-2">
           {dragHandleProps && (
             <DragHandle
@@ -1702,6 +1760,10 @@ const QuestionEditor = ({
               </svg>
             )}
           </button>
+          <DuplicateButton
+            onClick={onDuplicate}
+            className="ml-2"
+          />
           <button
             type="button"
             onClick={onRemove}
