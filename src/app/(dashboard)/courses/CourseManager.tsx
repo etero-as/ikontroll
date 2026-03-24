@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import Link from 'next/link';
 import DuplicateButton from '@/components/DuplicateButton';
 import { useRouter } from 'next/navigation';
@@ -25,6 +25,7 @@ import type {
   CourseStatus,
   LocaleStringMap,
 } from '@/types/course';
+import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 
 type CourseFormValues = {
   title: string;
@@ -387,6 +388,68 @@ export default function CourseManager() {
   );
 }
 
+const CourseModalFrame = ({
+  tag,
+  title,
+  onClose,
+  onSubmit,
+  submitLabel,
+  loading = false,
+  children,
+}: {
+  tag: string;
+  title: string;
+  onClose: () => void;
+  onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
+  submitLabel: string;
+  loading?: boolean;
+  children: ReactNode;
+}) => {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              {tag}
+            </p>
+            <h4 className="text-2xl font-semibold text-slate-900">{title}</h4>
+          </div>
+          <button
+            onClick={onClose}
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:opacity-60"
+            aria-label="Lukk"
+            disabled={loading}
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          {children}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              disabled={loading}
+            >
+              Avbryt
+            </button>
+            <button
+              type="submit"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              disabled={loading}
+            >
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const CreateCourseModal = ({
   onSubmit,
   onClose,
@@ -414,154 +477,57 @@ const CreateCourseModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Nytt kurs
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">Kursinformasjon</h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
-            aria-label="Lukk"
-          >
-            ×
-          </button>
-        </div>
+    <CourseModalFrame
+      tag="Nytt kurs"
+      title="Kursinformasjon"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitLabel="Lagre og administrer"
+    >
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Tittel</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <input
+          {...form.register('title', { required: true })}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Beskrivelse</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <textarea
+          {...form.register('description')}
+          rows={3}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        Status
+        <select
+          {...form.register('status')}
+          className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        >
+          <option value="active">Aktiv</option>
+          <option value="inactive">Inaktiv</option>
+        </select>
+      </label>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <input
-              {...form.register('title', { required: true })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Beskrivelse</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <textarea
-              {...form.register('description')}
-              rows={3}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            Status
-            <select
-              {...form.register('status')}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="active">Aktiv</option>
-              <option value="inactive">Inaktiv</option>
-            </select>
-          </label>
+      <CourseExpirationFields form={form} expirationType={expirationType} />
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">Utløp</p>
-            <div className="mt-3 flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Type
-                <select
-                  {...form.register('expirationType')}
-                  className="w-fit min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="none">Ingen utløp</option>
-                  <option value="days">Antall dager</option>
-                  <option value="months">Antall måneder</option>
-                  <option value="date">Dato</option>
-                </select>
-              </label>
-
-              {(expirationType === 'days' || expirationType === 'months') && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  {expirationType === 'days' ? 'Dager' : 'Måneder'}
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    {...form.register('expirationAmount', {
-                      valueAsNumber: true,
-                      validate: (value) =>
-                        expirationType === 'days' || expirationType === 'months'
-                          ? typeof value === 'number' &&
-                            Number.isFinite(value) &&
-                            value > 0
-                            ? true
-                            : 'Angi et gyldig antall.'
-                          : true,
-                    })}
-                    className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationAmount?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationAmount.message}
-                    </span>
-                  )}
-                </label>
-              )}
-
-              {expirationType === 'date' && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  Dato
-                  <input
-                    type="date"
-                    {...form.register('expirationDate', {
-                      validate: (value) =>
-                        expirationType === 'date'
-                          ? value?.trim()
-                            ? true
-                            : 'Velg en dato.'
-                          : true,
-                    })}
-                    className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationDate?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationDate.message}
-                    </span>
-                  )}
-                </label>
-              )}
-            </div>
-          </div>
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Lagre og administrer
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {errorMessage && (
+        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
+      )}
+    </CourseModalFrame>
   );
 };
 
@@ -592,65 +558,33 @@ const DuplicateCourseModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Dupliser kurs
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">Gi kopien et navn</h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:opacity-60"
-            aria-label="Lukk"
-            disabled={loading}
-          >
-            ×
-          </button>
-        </div>
+    <CourseModalFrame
+      tag="Dupliser kurs"
+      title="Gi kopien et navn"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitLabel={loading ? 'Dupliserer …' : 'Dupliser kurs'}
+      loading={loading}
+    >
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Tittel</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <input
+          {...form.register('title', { required: true })}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          disabled={loading}
+        />
+      </label>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <input
-              {...form.register('title', { required: true })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              disabled={loading}
-            />
-          </label>
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              disabled={loading}
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
-              disabled={loading}
-            >
-              {loading ? 'Dupliserer …' : 'Dupliser kurs'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {errorMessage && (
+        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
+      )}
+    </CourseModalFrame>
   );
 };

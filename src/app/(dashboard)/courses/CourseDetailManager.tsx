@@ -45,6 +45,7 @@ import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DuplicateButton from '@/components/DuplicateButton';
 import DragHandle from '@/components/DragHandle';
+import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
 import {
   Course,
@@ -195,7 +196,7 @@ const SortableModuleItem = ({
           <DuplicateButton onClick={() => onDuplicate(module)} />
           <button
             onClick={() => onDelete(module.id)}
-            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
             Fjern emne
           </button>
@@ -875,7 +876,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         <div className="flex items-center gap-3">
           <Link
             href="/courses"
-            className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
             ← Tilbake til kursoversikt
           </Link>
@@ -891,7 +892,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               key={lang}
               type="button"
               onClick={() => setActiveLanguage(lang)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeLanguage === lang
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -917,7 +918,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               />
               <button
                 type="submit"
-                className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 Legg til
               </button>
@@ -927,7 +928,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                   setIsAddingLanguage(false);
                   setLanguageInput('');
                 }}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
                 aria-label="Avbryt"
               >
                 ×
@@ -940,7 +941,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 setIsAddingLanguage(true);
                 setLanguageInput('');
               }}
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               aria-label="Legg til språk"
             >
               +
@@ -956,7 +957,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             id="course-status-select"
             value={statusValue}
             onChange={handleStatusChange}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <option value="active">Aktiv</option>
             <option value="inactive">Inaktiv</option>
@@ -980,7 +981,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={handleDeleteCourse}
-            className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
             Fjern kurs
           </button>
@@ -1039,74 +1040,11 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             />
           </label>
 
-          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">Utløp</p>
-            <div className="mt-3 flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Type
-                <select
-                  {...form.register('expirationType')}
-                  className="w-fit min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="none">Ingen utløp</option>
-                  <option value="days">Antall dager</option>
-                  <option value="months">Antall måneder</option>
-                  <option value="date">Dato</option>
-                </select>
-              </label>
-
-              {(expirationType === 'days' || expirationType === 'months') && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  {expirationType === 'days' ? 'Dager' : 'Måneder'}
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    {...form.register('expirationAmount', {
-                      valueAsNumber: true,
-                      validate: (value) =>
-                        expirationType === 'days' || expirationType === 'months'
-                          ? typeof value === 'number' &&
-                            Number.isFinite(value) &&
-                            value > 0
-                            ? true
-                            : 'Angi et gyldig antall.'
-                          : true,
-                    })}
-                    className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationAmount?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationAmount.message}
-                    </span>
-                  )}
-                </label>
-              )}
-
-              {expirationType === 'date' && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  Dato
-                  <input
-                    type="date"
-                    {...form.register('expirationDate', {
-                      validate: (value) =>
-                        expirationType === 'date'
-                          ? value?.trim()
-                            ? true
-                            : 'Velg en dato.'
-                          : true,
-                    })}
-                    className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationDate?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationDate.message}
-                    </span>
-                  )}
-                </label>
-              )}
-            </div>
-          </div>
+          <CourseExpirationFields
+            form={form}
+            expirationType={expirationType}
+            className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4"
+          />
 
           <div className="md:col-span-2 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between">
@@ -1120,7 +1058,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 <button
                   type="button"
                   onClick={handleRemoveCourseImage}
-                  className="rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                  className="cursor-pointer rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
                   disabled={uploadingImage}
                 >
                   Fjern bilde
@@ -1128,7 +1066,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               )}
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
+              <label className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
                 <span>{uploadingImage ? 'Laster opp …' : 'Velg bilde'}</span>
                 <input
                   type="file"
@@ -1161,11 +1099,11 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             <button
               type="button"
               onClick={handlePreviewCourse}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Forhåndsvis
             </button>
-            <SaveChangesButton type="button" onClick={handleCourseInfoSave} loading={savingCourseInfo} />
+            <SaveChangesButton type="button" onClickAction={handleCourseInfoSave} loading={savingCourseInfo} />
           </div>
         </form>
       </div>
@@ -1182,7 +1120,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={openCreateModule}
-            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
             + Nytt emne
           </button>
@@ -1292,7 +1230,7 @@ const ModuleQuickCreateModal = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Lukk"
             disabled={loading}
           >
@@ -1438,14 +1376,14 @@ const ModuleQuickCreateModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               Avbryt
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
               disabled={loading}
             >
               Opprett og administrer
@@ -1520,7 +1458,7 @@ const DuplicateModuleModal = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Lukk"
             disabled={loading}
           >
@@ -1583,7 +1521,7 @@ const DuplicateModuleModal = ({
               Kurs
               <select
                 {...form.register('targetCourseId')}
-                className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 disabled={!hasOtherCourses || loading}
               >
                 {otherCourses.map((course) => (
@@ -1605,14 +1543,14 @@ const DuplicateModuleModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               Avbryt
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
               disabled={loading}
             >
               {loading ? 'Dupliserer …' : 'Dupliser emne'}

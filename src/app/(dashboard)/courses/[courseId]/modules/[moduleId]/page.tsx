@@ -387,7 +387,7 @@ export default function CourseModuleDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href={`/courses/${courseId}`}
-            className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
             ← Tilbake til kurset
           </Link>
@@ -404,7 +404,7 @@ export default function CourseModuleDetailPage() {
               key={lang}
               type="button"
               onClick={() => setActiveLanguage(lang)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeLanguage === lang
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -419,7 +419,7 @@ export default function CourseModuleDetailPage() {
               const next = prompt('Legg til språk (f.eks. sv)');
               if (next) addLanguage(next);
             }}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             +
           </button>
@@ -441,7 +441,7 @@ export default function CourseModuleDetailPage() {
           </div>
           <button
             onClick={handleDelete}
-            className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
             Fjern emne
           </button>
@@ -532,12 +532,12 @@ export default function CourseModuleDetailPage() {
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
             onClick={handlePreview}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             type="button"
           >
             Forhåndsvis
           </button>
-          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
+          <SaveChangesButton type="button" onClickAction={handleSave} loading={saving} />
         </div>
       </div>
 
@@ -561,7 +561,7 @@ export default function CourseModuleDetailPage() {
         </div>
 
         <div className="mt-6 flex items-center justify-end">
-          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
+          <SaveChangesButton type="button" onClickAction={handleSave} loading={saving} />
         </div>
       </div>
     </section>
@@ -776,49 +776,49 @@ const QuillEditor = ({
             <button
               type="button"
               onClick={() => handleTableAction('insertRowAbove')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny rad over
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertRowBelow')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny rad under
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnLeft')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny kolonne venstre
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnRight')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny kolonne høyre
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteRow')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett rad
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteColumn')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett kolonne
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteTable')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett tabell
             </button>
@@ -1096,7 +1096,7 @@ const LocaleMediaEditor = ({
         <button
           type="button"
           onClick={() => handleUploadClick('image')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'image'}
         >
           {uploading === 'image' ? 'Laster opp …' : 'Last opp bilde'}
@@ -1104,7 +1104,7 @@ const LocaleMediaEditor = ({
         <button
           type="button"
           onClick={() => handleUploadClick('video')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'video'}
         >
           {uploading === 'video' ? 'Laster opp …' : 'Last opp video'}
@@ -1112,7 +1112,7 @@ const LocaleMediaEditor = ({
         <button
           type="button"
           onClick={() => handleUploadClick('document')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'document'}
         >
           {uploading === 'document' ? 'Laster opp …' : 'Last opp PDF'}
@@ -1319,14 +1319,14 @@ const SortableMediaCard = ({
               onClick={() => window.open(item.url, '_blank')}
               disabled={mediaError}
               title={mediaError ? 'Filen er ikke tilgjengelig' : undefined}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Åpne
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+              className="cursor-pointer rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
               Fjern
             </button>
@@ -1477,7 +1477,7 @@ const QuestionListEditor = ({
             <button
               type="button"
               onClick={handleToggleAll}
-              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             >
               {allMinimized ? 'Vis alle spørsmål' : 'Skjul alle spørsmål'}
             </button>
@@ -1485,7 +1485,7 @@ const QuestionListEditor = ({
           <button
             type="button"
             onClick={addQuestion}
-            className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
           >
             Legg til spørsmål
           </button>
@@ -1631,7 +1631,7 @@ const SortableQuestionAlternative = ({
             <button
               type="button"
               onClick={() => onRemove(alternative.id)}
-              className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+              className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
               Fjern alternativ
             </button>
@@ -1791,7 +1791,7 @@ const QuestionEditor = ({
           <button
             type="button"
             onClick={onToggleMinimized}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+            className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
             title={isMinimized ? 'Vis detaljer' : 'Skjul detaljer'}
           >
             {isMinimized ? (
@@ -1811,7 +1811,7 @@ const QuestionEditor = ({
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
             Fjern spørsmål
           </button>
@@ -1835,7 +1835,7 @@ const QuestionEditor = ({
               <button
                 type="button"
                 onClick={addAlternative}
-                className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
               >
                 Legg til alternativ
               </button>
