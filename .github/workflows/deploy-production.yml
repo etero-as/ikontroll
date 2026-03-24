@@ -27,6 +27,8 @@ jobs:
         run: cp env.local.example .env.local
 
       - name: Build Next.js app
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
         run: npm run build
 
       - name: Authenticate with Google
