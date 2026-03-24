@@ -883,10 +883,7 @@ const LocaleRichEditor = ({
       'underline',
       'strike',
       'list',
-      'bullet',
-      'ordered',
       'link',
-      // Quill v2 built-in table formats
       'table',
       'table-row',
       'table-body',
