@@ -1109,7 +1109,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 rounded-xl border-b border-slate-100 px-2 pb-4 pt-1 hover:bg-slate-100 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border-b border-slate-100 px-2 pb-4 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Emner

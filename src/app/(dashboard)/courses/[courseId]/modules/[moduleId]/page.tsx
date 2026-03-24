@@ -1348,7 +1348,9 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
-  const [minimizedIds, setMinimizedIds] = useState<Set<string>>(new Set());
+  const [minimizedIds, setMinimizedIds] = useState<Set<string>>(
+    () => new Set(questions.map((question) => question.id)),
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
