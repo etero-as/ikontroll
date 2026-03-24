@@ -86,16 +86,6 @@ type DuplicateModuleFormValues = {
   targetCourseId?: string;
 };
 
-const STATUS_LABELS: Record<'active' | 'inactive', string> = {
-  active: 'Aktiv',
-  inactive: 'Inaktiv',
-};
-
-const STATUS_STYLES: Record<'active' | 'inactive', string> = {
-  active: 'bg-emerald-100 text-emerald-700',
-  inactive: 'bg-slate-100 text-slate-600',
-};
-
 const createEmptyLocaleMap = (languages: string[]): LocaleStringMap =>
   languages.reduce<LocaleStringMap>((acc, lang) => {
     acc[lang] = '';
@@ -137,14 +127,12 @@ const clampPercentage = (value: number) => Math.min(100, Math.max(0, value));
 const SortableModuleItem = ({
   module,
   activeLanguage,
-  courseId,
   onOpen,
   onDelete,
   onDuplicate,
 }: {
   module: CourseModule;
   activeLanguage: string;
-  courseId: string;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (module: CourseModule) => void;
@@ -220,7 +208,7 @@ const SortableModuleItem = ({
 export default function CourseDetailManager({ courseId }: { courseId: string }) {
   const router = useRouter();
   const { companyId } = useAuth();
-  const { course, loading, error } = useCourse(courseId);
+  const { course } = useCourse(courseId);
   const { courses: allCourses } = useCourses(companyId ?? null);
   const {
     modules,
@@ -397,16 +385,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       ]),
     );
     setLanguages(mergedLanguages);
-    const ensureCourseLocales = (map: LocaleStringMap | undefined) => {
-      const base = createEmptyLocaleMap(mergedLanguages);
-      if (!map) {
-        return base;
-      }
-      mergedLanguages.forEach((lang) => {
-        base[lang] = map[lang] ?? '';
-      });
-      return base;
-    };
     form.reset({
       title: course.title,
       description: course.description ?? { no: '' },
@@ -874,7 +852,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               key={module.id}
               module={module}
               activeLanguage={activeLanguage}
-              courseId={courseId}
               onOpen={handleOpenModule}
               onDelete={handleDeleteModule}
               onDuplicate={(target) => {
@@ -1069,7 +1046,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 Type
                 <select
                   {...form.register('expirationType')}
-                  className="w-fit min-w-[12rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className="w-fit min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 >
                   <option value="none">Ingen utløp</option>
                   <option value="days">Antall dager</option>

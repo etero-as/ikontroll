@@ -131,10 +131,11 @@ export default function CourseManager() {
   };
 
   const handleCreateCourse = async (values: CourseFormValues) => {
+    if (!companyId || !profile) {
+      setFormError('Mangler selskapskontekst');
+      return;
+    }
     try {
-      if (!companyId || !profile) {
-        throw new Error('Mangler selskapskontekst');
-      }
       const expirationFields = resolveExpirationFields(values);
       const payload: CoursePayload = {
         companyId,
@@ -171,10 +172,11 @@ export default function CourseManager() {
 
   const handleDuplicateCourse = async (values: DuplicateCourseFormValues) => {
     if (!duplicateTarget) return;
+    if (!companyId || !profile) {
+      setDuplicateError('Mangler selskapskontekst');
+      return;
+    }
     try {
-      if (!companyId || !profile) {
-        throw new Error('Mangler selskapskontekst');
-      }
       const trimmedTitle = values.title.trim();
       if (!trimmedTitle) {
         setDuplicateError('Du må angi en tittel for kopien.');
@@ -186,7 +188,8 @@ export default function CourseManager() {
       const sourceRef = doc(db, 'courses', duplicateTarget.id);
       const sourceSnap = await getDoc(sourceRef);
       if (!sourceSnap.exists()) {
-        throw new Error('Fant ikke kurset du vil duplisere.');
+        setDuplicateError('Fant ikke kurset du vil duplisere.');
+        return;
       }
       const sourceData = sourceSnap.data();
       const nextTitle = {
@@ -473,7 +476,7 @@ const CreateCourseModal = ({
                 Type
                 <select
                   {...form.register('expirationType')}
-                  className="w-fit min-w-[12rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className="w-fit min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 >
                   <option value="none">Ingen utløp</option>
                   <option value="days">Antall dager</option>

@@ -129,7 +129,7 @@ const ensureLocaleKeys = (
 };
 
 const ensureLocaleArrayKeys = (
-  map: LocaleStringArrayMap | undefined,
+  map: Record<string, unknown> | undefined,
   languages: string[],
 ) => {
   const base = createEmptyLocaleArrayMap(languages);
@@ -138,8 +138,6 @@ const ensureLocaleArrayKeys = (
     const entries = map[lang];
     if (Array.isArray(entries)) {
       base[lang] = entries;
-    } else if (typeof entries === 'string') {
-      base[lang] = [entries];
     } else if (entries == null) {
       base[lang] = [];
     } else {
@@ -1310,7 +1308,7 @@ const SortableMediaCard = ({
               <span className="text-4xl" role="img" aria-label="Dokument">
                 📄
               </span>
-              <p className="text-xs font-semibold break-words">{documentName ?? 'Dokument'}</p>
+              <p className="text-xs font-semibold wrap-break-word">{documentName ?? 'Dokument'}</p>
             </div>
           )}
         </div>
