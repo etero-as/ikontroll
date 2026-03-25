@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChangeEvent } from 'react';
 import {
   DndContext,
+  DragOverlay,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
   PointerSensor,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -18,6 +24,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   deleteDoc,
   doc,
@@ -29,6 +36,8 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { db, storage } from '@/lib/firebase';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
+import DuplicateButton from '@/components/DuplicateButton';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -120,7 +129,7 @@ const ensureLocaleKeys = (
 };
 
 const ensureLocaleArrayKeys = (
-  map: LocaleStringArrayMap | undefined,
+  map: Record<string, unknown> | undefined,
   languages: string[],
 ) => {
   const base = createEmptyLocaleArrayMap(languages);
@@ -129,8 +138,6 @@ const ensureLocaleArrayKeys = (
     const entries = map[lang];
     if (Array.isArray(entries)) {
       base[lang] = entries;
-    } else if (typeof entries === 'string') {
-      base[lang] = [entries];
     } else if (entries == null) {
       base[lang] = [];
     } else {
@@ -150,7 +157,7 @@ const getLocaleValue = (map: LocaleStringMap | undefined, lang = 'no') => {
 const collectLanguagesFromModule = (
   module: CourseModulePayload,
 ): string[] => {
-  const collected = new Set<string>(DEFAULT_LANGUAGES);
+  const collected = new Set<string>();
   Object.keys(module.title ?? {}).forEach((lang) => collected.add(lang));
   Object.keys(module.summary ?? {}).forEach((lang) => collected.add(lang));
   Object.keys(module.body ?? {}).forEach((lang) => collected.add(lang));
@@ -166,6 +173,7 @@ const collectLanguagesFromModule = (
       Object.keys(alt.altText ?? {}).forEach((lang) => collected.add(lang));
     });
   });
+  if (!collected.size) collected.add('no');
   return Array.from(collected);
 };
 
@@ -186,6 +194,11 @@ export default function CourseModuleDetailPage() {
   const [draft, setDraft] = useState<CourseModulePayload | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isAddingLanguage, setIsAddingLanguage] = useState(false);
+  const [languageInput, setLanguageInput] = useState('');
+  const languageInputRef = useRef<HTMLInputElement | null>(null);
+  const initializedModuleIdRef = useRef<string | null>(null);
+  const languageScrollRestoreRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!module) {
@@ -212,27 +225,41 @@ export default function CourseModuleDetailPage() {
       examPassPercentage,
     };
 
-    const discoveredLanguages = collectLanguagesFromModule(provisionalDraft);
-    setLanguages(discoveredLanguages);
-    if (!discoveredLanguages.includes(activeLanguage)) {
-      setActiveLanguage(discoveredLanguages[0] ?? 'no');
+    const isFirstLoad = initializedModuleIdRef.current !== moduleId;
+    let nextLanguages: string[];
+    if (module.languages?.length) {
+      nextLanguages = module.languages;
+    } else if (isFirstLoad) {
+      const discovered = collectLanguagesFromModule(provisionalDraft);
+      nextLanguages = Array.from(new Set([...DEFAULT_LANGUAGES, ...discovered]));
+    } else {
+      nextLanguages = collectLanguagesFromModule(provisionalDraft);
+    }
+
+    if (isFirstLoad) {
+      initializedModuleIdRef.current = moduleId;
+    }
+
+    setLanguages(nextLanguages);
+    if (!nextLanguages.includes(activeLanguage)) {
+      setActiveLanguage(nextLanguages[0] ?? 'no');
     }
 
     setDraft({
       ...provisionalDraft,
-      title: ensureLocaleKeys(provisionalDraft.title, discoveredLanguages),
-      summary: ensureLocaleKeys(provisionalDraft.summary, discoveredLanguages),
-      body: ensureLocaleKeys(provisionalDraft.body, discoveredLanguages),
-      media: ensureMediaLocales(provisionalDraft.media, discoveredLanguages),
-      videoUrls: ensureLocaleArrayKeys(provisionalDraft.videoUrls, discoveredLanguages),
-      imageUrls: ensureLocaleArrayKeys(provisionalDraft.imageUrls, discoveredLanguages),
+      title: ensureLocaleKeys(provisionalDraft.title, nextLanguages),
+      summary: ensureLocaleKeys(provisionalDraft.summary, nextLanguages),
+      body: ensureLocaleKeys(provisionalDraft.body, nextLanguages),
+      media: ensureMediaLocales(provisionalDraft.media, nextLanguages),
+      videoUrls: ensureLocaleArrayKeys(provisionalDraft.videoUrls, nextLanguages),
+      imageUrls: ensureLocaleArrayKeys(provisionalDraft.imageUrls, nextLanguages),
       questions: provisionalDraft.questions.map((question) => ({
         ...question,
-        title: ensureLocaleKeys(question.title, discoveredLanguages),
-        contentText: ensureLocaleKeys(question.contentText, discoveredLanguages),
+        title: ensureLocaleKeys(question.title, nextLanguages),
+        contentText: ensureLocaleKeys(question.contentText, nextLanguages),
         alternatives: question.alternatives.map((alt) => ({
           ...alt,
-          altText: ensureLocaleKeys(alt.altText, discoveredLanguages),
+          altText: ensureLocaleKeys(alt.altText, nextLanguages),
         })),
       })),
     });
@@ -246,6 +273,16 @@ export default function CourseModuleDetailPage() {
     return getLocaleValue(moduleTitle, activeLanguage) || (moduleId ?? '');
   }, [moduleTitle, activeLanguage, moduleId]);
 
+  const handleLanguageSelect = (lang: string) => {
+    if (lang === activeLanguage) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      languageScrollRestoreRef.current = window.scrollY;
+    }
+    setActiveLanguage(lang);
+  };
+
   const addLanguage = (lang: string) => {
     const trimmed = lang.trim().toLowerCase();
     if (!trimmed) return;
@@ -257,6 +294,8 @@ export default function CourseModuleDetailPage() {
     const nextLanguages = [...languages, trimmed];
     setLanguages(nextLanguages);
     setActiveLanguage(trimmed);
+    setLanguageInput('');
+    setIsAddingLanguage(false);
     setDraft((prev) =>
       prev
         ? {
@@ -280,6 +319,83 @@ export default function CourseModuleDetailPage() {
         : prev,
     );
   };
+
+  const removeLanguage = (lang: string) => {
+    if (languages.length <= 1) return;
+    const nextLanguages = languages.filter((l) => l !== lang);
+    setLanguages(nextLanguages);
+    if (activeLanguage === lang) {
+      setActiveLanguage(nextLanguages[0]);
+    }
+    const stripKey = (map: LocaleStringMap | undefined): LocaleStringMap => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    const stripArrayKey = (map: Record<string, string[]> | undefined): Record<string, string[]> => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            title: stripKey(prev.title),
+            summary: stripKey(prev.summary),
+            body: stripKey(prev.body),
+            media: (() => {
+              const next = { ...(prev.media ?? {}) };
+              delete next[lang];
+              return next;
+            })(),
+            videoUrls: stripArrayKey(prev.videoUrls as Record<string, string[]>),
+            imageUrls: stripArrayKey(prev.imageUrls as Record<string, string[]>),
+            questions: prev.questions.map((question) => ({
+              ...question,
+              title: stripKey(question.title),
+              contentText: stripKey(question.contentText),
+              alternatives: question.alternatives.map((alt) => ({
+                ...alt,
+                altText: stripKey(alt.altText),
+              })),
+            })),
+          }
+        : prev,
+    );
+  };
+
+  const handleRemoveActiveLanguage = () => {
+    if (languages.length <= 1) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Fjern spraket ${activeLanguage.toUpperCase()} fra emnet?`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    removeLanguage(activeLanguage);
+  };
+
+  useEffect(() => {
+    if (isAddingLanguage) {
+      requestAnimationFrame(() => {
+        languageInputRef.current?.focus();
+      });
+    }
+  }, [isAddingLanguage]);
+
+  useEffect(() => {
+    const top = languageScrollRestoreRef.current;
+    if (top == null || typeof window === 'undefined') {
+      return;
+    }
+    languageScrollRestoreRef.current = null;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top, behavior: 'auto' });
+    });
+  }, [activeLanguage]);
 
   const updateField = <K extends keyof CourseModulePayload>(
     key: K,
@@ -305,6 +421,7 @@ export default function CourseModuleDetailPage() {
         order: draft.order ?? 0,
         questions: draft.questions ?? [],
         moduleType: draft.moduleType ?? 'normal',
+        languages,
         updatedAt: serverTimestamp(),
       };
       if (draft.moduleType === 'exam') {
@@ -380,21 +497,24 @@ export default function CourseModuleDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href={`/courses/${courseId}`}
-            className="text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kurs
+            ← Tilbake til kursadministrasjon
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             Emneadministrasjon
           </p>
         </div>
-        <div className="flex items-center gap-2">
+      </div>
+
+      <div className="flex min-h-18 flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
           {languages.map((lang) => (
             <button
               key={lang}
               type="button"
-              onClick={() => setActiveLanguage(lang)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              onClick={() => handleLanguageSelect(lang)}
+              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeLanguage === lang
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -403,22 +523,73 @@ export default function CourseModuleDetailPage() {
               {lang.toUpperCase()}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              const next = prompt('Legg til språk (f.eks. sv)');
-              if (next) addLanguage(next);
-            }}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            +
-          </button>
+          {isAddingLanguage ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addLanguage(languageInput);
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                ref={languageInputRef}
+                value={languageInput}
+                onChange={(e) => setLanguageInput(e.target.value)}
+                placeholder="Språkkode"
+                className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Legg til
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(false);
+                  setLanguageInput('');
+                }}
+                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Avbryt"
+              >
+                ×
+              </button>
+            </form>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(true);
+                  setLanguageInput('');
+                }}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Legg til språk"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveActiveLanguage}
+                disabled={languages.length <= 1}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
+                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+              >
+                -
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Emneinformasjon
+            </p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {fallbackTitle || 'Emne'}
             </h1>
@@ -428,43 +599,54 @@ export default function CourseModuleDetailPage() {
           </div>
           <button
             onClick={handleDelete}
-            className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett emne
+            Fjern emne
           </button>
         </div>
 
         <div className="mt-6 space-y-6">
-          <LocaleFieldEditor
-            label="Emnetittel"
-            value={draft.title ?? {}}
-            onChange={(next) => updateField('title', next)}
-            activeLanguage={activeLanguage}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <LocaleFieldEditor
+                  label="Tittel"
+                  value={draft.title ?? {}}
+                  onChange={(next) => updateField('title', next)}
+                  activeLanguage={activeLanguage}
+                  variant="courseInfo"
+                />
 
-          <LocaleFieldEditor
-            label="Sammendrag"
-            value={draft.summary ?? {}}
-            onChange={(next) => updateField('summary', next)}
-            activeLanguage={activeLanguage}
-            multiline
-          />
+                <LocaleFieldEditor
+                  label="Beskrivelse"
+                  value={draft.summary ?? {}}
+                  onChange={(next) => updateField('summary', next)}
+                  activeLanguage={activeLanguage}
+                  multiline
+                  variant="courseInfo"
+                  containerClassName="md:col-span-2"
+                />
+              </div>
 
-          <LocaleRichEditor
-            label="Innhold"
-            value={draft.body ?? {}}
-            onChange={(next) => updateField('body', next)}
-            activeLanguage={activeLanguage}
-          />
+              <LocaleRichEditor
+                label="Innhold"
+                value={draft.body ?? {}}
+                onChange={(next) => updateField('body', next)}
+                activeLanguage={activeLanguage}
+              />
+            </div>
+          </div>
 
-          <LocaleMediaEditor
-            label="Media"
-            media={draft.media ?? {}}
-            onChange={(next) => updateField('media', next)}
-            activeLanguage={activeLanguage}
-            courseId={courseId}
-            moduleId={moduleId}
-          />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <LocaleMediaEditor
+              label="Media"
+              media={draft.media ?? {}}
+              onChange={(next) => updateField('media', next)}
+              activeLanguage={activeLanguage}
+              courseId={courseId}
+              moduleId={moduleId}
+            />
+          </div>
 
           {draft.moduleType === 'exam' && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -497,13 +679,6 @@ export default function CourseModuleDetailPage() {
               </div>
             </div>
           )}
-
-          <QuestionListEditor
-            questions={draft.questions}
-            onChange={(next) => updateField('questions', next)}
-            languages={languages}
-            activeLanguage={activeLanguage}
-          />
         </div>
 
         {formError && (
@@ -514,20 +689,37 @@ export default function CourseModuleDetailPage() {
 
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
-            onClick={() => router.push(`/courses/${courseId}`)}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            type="button"
-          >
-            Avbryt
-          </button>
-          <button
             onClick={handlePreview}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             type="button"
           >
             Forhåndsvis
           </button>
-          <SaveChangesButton type="button" onClick={handleSave} loading={saving} />
+          <SaveChangesButton type="button" onClickAction={handleSave} loading={saving} />
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-b border-slate-100 pb-4">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Kontrollspørsmål
+          </p>
+          <p className="text-sm text-slate-500">
+            Spørsmål som stilles til kursdeltakeren etter at emnet er gjennomgått.
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <QuestionListEditor
+            questions={draft.questions}
+            onChange={(next) => updateField('questions', next)}
+            languages={languages}
+            activeLanguage={activeLanguage}
+          />
+        </div>
+
+        <div className="mt-6 flex items-center justify-end">
+          <SaveChangesButton type="button" onClickAction={handleSave} loading={saving} />
         </div>
       </div>
     </section>
@@ -540,12 +732,16 @@ const LocaleFieldEditor = ({
   onChange,
   activeLanguage,
   multiline,
+  variant = 'default',
+  containerClassName,
 }: {
   label: string;
   value: LocaleStringMap;
   onChange: (next: LocaleStringMap) => void;
   activeLanguage: string;
   multiline?: boolean;
+  variant?: 'default' | 'courseInfo';
+  containerClassName?: string;
 }) => {
   const currentValue = value?.[activeLanguage] ?? '';
 
@@ -555,28 +751,46 @@ const LocaleFieldEditor = ({
     onChange(next);
   };
 
+  const field = multiline ? (
+    <textarea
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      rows={4}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  ) : (
+    <input
+      value={currentValue}
+      onChange={(e) => updateValue(e.target.value)}
+      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+    />
+  );
+
+  if (variant === 'courseInfo') {
+    return (
+      <label
+        className={`${containerClassName ? `${containerClassName} ` : ''}flex flex-col gap-1 text-sm font-medium text-slate-700`}
+      >
+        <span className="flex items-center justify-between">
+          <span>{label}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {activeLanguage.toUpperCase()}
+          </span>
+        </span>
+        {field}
+      </label>
+    );
+  }
+
   return (
-    <div className="space-y-2">
+    <div className={`${containerClassName ? `${containerClassName} ` : ''}space-y-2`}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">{label}</p>
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {activeLanguage.toUpperCase()}
         </span>
       </div>
-      {multiline ? (
-        <textarea
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          rows={4}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      ) : (
-        <input
-          value={currentValue}
-          onChange={(e) => updateValue(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-        />
-      )}
+      {field}
     </div>
   );
 };
@@ -708,7 +922,7 @@ const QuillEditor = ({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div ref={containerRef} />
       {showTableActions &&
         tableActionsHost &&
@@ -720,49 +934,49 @@ const QuillEditor = ({
             <button
               type="button"
               onClick={() => handleTableAction('insertRowAbove')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny rad over
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertRowBelow')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny rad under
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnLeft')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny kolonne venstre
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnRight')}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
               Ny kolonne høyre
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteRow')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett rad
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteColumn')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett kolonne
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteTable')}
-              className="rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
               Slett tabell
             </button>
@@ -825,10 +1039,7 @@ const LocaleRichEditor = ({
       'underline',
       'strike',
       'list',
-      'bullet',
-      'ordered',
       'link',
-      // Quill v2 built-in table formats
       'table',
       'table-row',
       'table-body',
@@ -894,6 +1105,10 @@ const LocaleMediaEditor = ({
     [media, activeLanguage, onChange],
   );
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeItem, setActiveItem] = useState<ModuleMediaItem | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
   const maybeDeleteUploadedFile = useCallback(async (url: string) => {
     if (!url.includes('firebasestorage.googleapis.com')) return;
     try {
@@ -912,13 +1127,38 @@ const LocaleMediaEditor = ({
     }
   }, []);
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const id = String(event.active.id);
+    setActiveId(id);
+    setActiveItem(items.find((item) => item.id === id) ?? null);
+    setOverId(null);
+  }, [items]);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const newOverId = event.over ? String(event.over.id) : null;
+    const currentActiveId = event.active ? String(event.active.id) : null;
+    setOverId(newOverId && newOverId !== currentActiveId ? newOverId : null);
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    if (!event.over || event.active.id === event.over.id) return;
-    const oldIndex = items.findIndex((item) => item.id === event.active.id);
-    const newIndex = items.findIndex((item) => item.id === event.over?.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    updateList(arrayMove(items, oldIndex, newIndex));
+    const { active, over } = event;
+    setActiveId(null);
+    setActiveItem(null);
+    setOverId(null);
+    if (!over || active.id === over.id) return;
+    const draggedIdx = items.findIndex((item) => item.id === active.id);
+    const targetIdx = items.findIndex((item) => item.id === over.id);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+    const swapped = [...items];
+    [swapped[draggedIdx], swapped[targetIdx]] = [swapped[targetIdx], swapped[draggedIdx]];
+    updateList(swapped);
   }, [items, updateList]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+    setActiveItem(null);
+    setOverId(null);
+  }, []);
 
   const handleRemove = (id: string) => {
     const target = items.find((item) => item.id === id);
@@ -986,25 +1226,35 @@ const LocaleMediaEditor = ({
           Ingen media er lagt til for dette språket ennå.
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext items={items.map((item) => item.id)} strategy={() => null}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => (
                 <SortableMediaCard
                   key={item.id}
                   item={item}
                   onRemove={() => handleRemove(item.id)}
+                  isTarget={overId === item.id && activeId !== null && activeId !== item.id}
                 />
               ))}
             </div>
           </SortableContext>
+          <DragOverlay dropAnimation={null}>
+            {activeItem ? <MediaDragOverlay item={activeItem} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => handleUploadClick('image')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'image'}
         >
           {uploading === 'image' ? 'Laster opp …' : 'Last opp bilde'}
@@ -1012,7 +1262,7 @@ const LocaleMediaEditor = ({
         <button
           type="button"
           onClick={() => handleUploadClick('video')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'video'}
         >
           {uploading === 'video' ? 'Laster opp …' : 'Last opp video'}
@@ -1020,7 +1270,7 @@ const LocaleMediaEditor = ({
         <button
           type="button"
           onClick={() => handleUploadClick('document')}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'document'}
         >
           {uploading === 'document' ? 'Laster opp …' : 'Last opp PDF'}
@@ -1099,49 +1349,87 @@ const MediaErrorFallback = ({ url, type }: { url: string; type: ModuleMediaItem[
   );
 };
 
-const SortableMediaCard = ({
-  item,
-  onRemove,
-}: {
-  item: ModuleMediaItem;
-  onRemove: () => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const [mediaError, setMediaError] = useState(false);
-  useEffect(() => {
-    setMediaError(false);
-  }, [item.url]);
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
-  };
+const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
   const typeLabel =
     item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
   const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${
-        isDragging ? 'ring-2 ring-slate-300' : ''
-      }`}
-    >
+    <div className="space-y-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl ring-2 ring-slate-300 cursor-grabbing opacity-95">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="cursor-grab rounded border border-slate-200 px-2 py-1 text-slate-700"
-          aria-label="Flytt"
-        >
-          ⇅
-        </button>
+        <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400">
+          <DragHandleIcon />
+        </span>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
           {typeLabel}
         </span>
+      </div>
+      <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+        {item.type === 'image' ? (
+          <img src={item.url} alt="" className="h-full w-full object-contain" />
+        ) : item.type === 'video' ? (
+          <div className="flex h-full w-full items-center justify-center text-4xl">🎥</div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-600">
+            <span className="text-4xl">📄</span>
+            <p className="text-xs font-semibold break-all">{documentName ?? 'Dokument'}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+const SortableMediaCard = ({
+  item,
+  onRemove,
+  isTarget,
+}: {
+  item: ModuleMediaItem;
+  onRemove: () => void;
+  isTarget: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({ id: item.id });
+  const [mediaError, setMediaError] = useState(false);
+  useEffect(() => {
+    setMediaError(false);
+  }, [item.url]);
+
+  const typeLabel =
+    item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
+  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
+
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 h-full min-h-70"
+        style={{ visibility: 'hidden' }}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-3 rounded-2xl border bg-white p-4 shadow-sm transition-transform duration-200 ${
+        isTarget
+          ? 'border-indigo-400 ring-2 ring-indigo-300 bg-indigo-50 scale-[1.03]'
+          : 'border-slate-200 scale-100'
+      }`}
+    >
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+        <DragHandle attributes={attributes} listeners={listeners} />
+        <div className="flex items-center gap-2">
+          {isTarget && (
+            <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+              ↔ Bytt
+            </span>
+          )}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
+            {typeLabel}
+          </span>
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
@@ -1178,7 +1466,7 @@ const SortableMediaCard = ({
               <span className="text-4xl" role="img" aria-label="Dokument">
                 📄
               </span>
-              <p className="text-xs font-semibold break-words">{documentName ?? 'Dokument'}</p>
+              <p className="text-xs font-semibold wrap-break-word">{documentName ?? 'Dokument'}</p>
             </div>
           )}
         </div>
@@ -1189,14 +1477,14 @@ const SortableMediaCard = ({
               onClick={() => window.open(item.url, '_blank')}
               disabled={mediaError}
               title={mediaError ? 'Filen er ikke tilgjengelig' : undefined}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Åpne
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+              className="cursor-pointer rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
               Fjern
             </button>
@@ -1218,6 +1506,16 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
+  const [minimizedIds, setMinimizedIds] = useState<Set<string>>(
+    () => new Set(questions.map((question) => question.id)),
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
   const addQuestion = () => {
     onChange([...questions, createEmptyQuestion(languages)]);
   };
@@ -1229,59 +1527,325 @@ const QuestionListEditor = ({
   };
 
   const removeQuestion = (index: number) => {
+    const removed = questions[index];
+    if (removed) {
+      setMinimizedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(removed.id);
+        return next;
+      });
+    }
     onChange(questions.filter((_, idx) => idx !== index));
+  };
+
+  const duplicateQuestion = (index: number) => {
+    const source = questions[index];
+    if (!source) {
+      return;
+    }
+
+    const alternativeIdMap = new Map<string, string>();
+    const duplicatedAlternatives = source.alternatives.map((alternative) => {
+      const duplicatedId = generateId();
+      alternativeIdMap.set(alternative.id, duplicatedId);
+      return {
+        ...alternative,
+        id: duplicatedId,
+        altText: { ...(alternative.altText ?? {}) },
+      };
+    });
+
+    const sourceCorrectIds = Array.isArray(source.correctAnswerIds)
+      ? source.correctAnswerIds
+      : source.correctAnswerId
+        ? [source.correctAnswerId]
+        : [];
+
+    const duplicatedCorrectIds = sourceCorrectIds
+      .map((id) => alternativeIdMap.get(id) ?? id)
+      .filter((id, idx, arr) => arr.indexOf(id) === idx)
+      .filter((id) => duplicatedAlternatives.some((alternative) => alternative.id === id));
+
+    const fallbackCorrectId = duplicatedAlternatives[0]?.id;
+    const nextCorrectIds =
+      duplicatedCorrectIds.length > 0
+        ? duplicatedCorrectIds
+        : fallbackCorrectId
+          ? [fallbackCorrectId]
+          : [];
+
+    const duplicatedQuestion: CourseQuestion = {
+      ...source,
+      id: generateId(),
+      title: { ...(source.title ?? {}) },
+      contentText: { ...(source.contentText ?? {}) },
+      alternatives: duplicatedAlternatives,
+      correctAnswerIds: nextCorrectIds,
+      correctAnswerId: nextCorrectIds[0],
+    };
+
+    const next = [...questions];
+    next.splice(index + 1, 0, duplicatedQuestion);
+    onChange(next);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
+      return;
+    }
+    const oldIndex = questions.findIndex((question) => question.id === event.active.id);
+    const newIndex = questions.findIndex((question) => question.id === event.over?.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return;
+    }
+    onChange(arrayMove(questions, oldIndex, newIndex));
+  };
+
+  const toggleMinimized = (id: string) => {
+    setMinimizedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const allMinimized = questions.length > 0 && questions.every((q) => minimizedIds.has(q.id));
+
+  const handleToggleAll = () => {
+    if (allMinimized) {
+      setMinimizedIds(new Set());
+    } else {
+      setMinimizedIds(new Set(questions.map((q) => q.id)));
+    }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">
-          Kontrollspørsmål ({questions.length})
+          Kontrollspørsmål{' '}
+          <span className="font-normal text-slate-500">
+            ({questions.length} {questions.length === 1 ? 'spørsmål' : 'spørsmål'})
+          </span>
         </p>
-        <button
-          type="button"
-          onClick={addQuestion}
-          className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-        >
-          Legg til spørsmål
-        </button>
+        <div className="flex items-center gap-2">
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            >
+              {allMinimized ? 'Vis alle spørsmål' : 'Skjul alle spørsmål'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+          >
+            Legg til spørsmål
+          </button>
+        </div>
       </div>
       {questions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
           Ingen kontrollspørsmål lagt til ennå.
         </div>
       ) : (
-        questions.map((question, index) => (
-          <QuestionEditor
-            key={question.id}
-            index={index}
-            question={question}
-            onChange={(next) => updateQuestion(index, next)}
-            onRemove={() => removeQuestion(index)}
-            languages={languages}
-            activeLanguage={activeLanguage}
-          />
-        ))
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={questions.map((question) => question.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {questions.map((question, index) => (
+                <SortableQuestionEditor
+                  key={question.id}
+                  id={question.id}
+                  index={index}
+                  question={question}
+                  onChange={(next) => updateQuestion(index, next)}
+                  onDuplicate={() => duplicateQuestion(index)}
+                  onRemove={() => removeQuestion(index)}
+                  languages={languages}
+                  activeLanguage={activeLanguage}
+                  isMinimized={minimizedIds.has(question.id)}
+                  onToggleMinimized={() => toggleMinimized(question.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
 };
 
-const QuestionEditor = ({
+const SortableQuestionEditor = ({
+  id,
   question,
   onChange,
+  onDuplicate,
   onRemove,
   languages,
   activeLanguage,
   index,
+  isMinimized,
+  onToggleMinimized,
 }: {
+  id: UniqueIdentifier;
   question: CourseQuestion;
   onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   languages: string[];
   activeLanguage: string;
   index: number;
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
 }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <QuestionEditor
+        index={index}
+        question={question}
+        onChange={onChange}
+        onDuplicate={onDuplicate}
+        onRemove={onRemove}
+        languages={languages}
+        activeLanguage={activeLanguage}
+        dragHandleProps={{ attributes, listeners }}
+        isMinimized={isMinimized}
+        onToggleMinimized={onToggleMinimized}
+      />
+    </div>
+  );
+};
+
+const SortableQuestionAlternative = ({
+  id,
+  alternative,
+  idx,
+  question,
+  currentCorrectIds,
+  onToggleCorrect,
+  onRemove,
+  onUpdate,
+  activeLanguage,
+}: {
+  id: UniqueIdentifier;
+  alternative: CourseQuestionAlternative;
+  idx: number;
+  question: CourseQuestion;
+  currentCorrectIds: string[];
+  onToggleCorrect: (altId: string) => void;
+  onRemove: (altId: string) => void;
+  onUpdate: (altId: string, map: LocaleStringMap) => void;
+  activeLanguage: string;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <DragHandle attributes={attributes} listeners={listeners} />
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Alternativ {idx + 1}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={currentCorrectIds.includes(alternative.id)}
+              onChange={() => onToggleCorrect(alternative.id)}
+            />
+            Riktig svar
+          </label>
+          {question.alternatives.length > 2 && (
+            <button
+              type="button"
+              onClick={() => onRemove(alternative.id)}
+              className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            >
+              Fjern alternativ
+            </button>
+          )}
+        </div>
+      </div>
+
+      <LocaleFieldEditor
+        label="Alternativ tekst"
+        value={alternative.altText}
+        onChange={(next) => onUpdate(alternative.id, next)}
+        activeLanguage={activeLanguage}
+      />
+    </div>
+  );
+};
+
+type DragHandleProps = {
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
+};
+
+const QuestionEditor = ({
+  question,
+  onChange,
+  onDuplicate,
+  onRemove,
+  languages,
+  activeLanguage,
+  index,
+  dragHandleProps,
+  isMinimized,
+  onToggleMinimized,
+}: {
+  question: CourseQuestion;
+  onChange: (next: CourseQuestion) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  languages: string[];
+  activeLanguage: string;
+  index: number;
+  dragHandleProps?: {
+    attributes: DragHandleProps['attributes'];
+    listeners: DragHandleProps['listeners'];
+  };
+  isMinimized: boolean;
+  onToggleMinimized: () => void;
+}) => {
+  const alternativeSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
   const updateLocaleField = (key: 'title' | 'contentText', map: LocaleStringMap) => {
     onChange({ ...question, [key]: map });
   };
@@ -1339,88 +1903,130 @@ const QuestionEditor = ({
     });
   };
 
+  const handleAlternativeDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
+      return;
+    }
+    const oldIndex = question.alternatives.findIndex((alt) => alt.id === event.active.id);
+    const newIndex = question.alternatives.findIndex((alt) => alt.id === event.over?.id);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return;
+    }
+    const reorderedAlternatives = arrayMove(question.alternatives, oldIndex, newIndex);
+    const orderedCorrectIds = reorderedAlternatives
+      .map((alt) => alt.id)
+      .filter((id) => currentCorrectIds.includes(id));
+    onChange({
+      ...question,
+      alternatives: reorderedAlternatives,
+      correctAnswerIds: orderedCorrectIds,
+      correctAnswerId: orderedCorrectIds[0],
+    });
+  };
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Spørsmål #{index + 1}
-          </p>
-          <p className="text-xs text-slate-500">
-            {question.alternatives.length} alternativer
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-        >
-          Fjern spørsmål
-        </button>
-      </div>
-
-      <div className="mt-4 space-y-4">
-        <LocaleFieldEditor
-          label="Spørsmålstekst"
-          value={question.contentText}
-          onChange={(next) => updateLocaleField('contentText', next)}
-          activeLanguage={activeLanguage}
-          multiline
-        />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
-            <button
-              type="button"
-              onClick={addAlternative}
-              className="rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-            >
-              Legg til alternativ
-            </button>
+    <div
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      {/* Header */}
+      <div className={`flex items-start justify-between p-4 hover:bg-slate-100 ${isMinimized ? 'rounded-2xl' : 'rounded-t-2xl'}`}>
+        <div className="flex items-start gap-2">
+          {dragHandleProps && (
+            <DragHandle
+              attributes={dragHandleProps.attributes}
+              listeners={dragHandleProps.listeners}
+              className="mt-0.5"
+            />
+          )}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Spørsmål #{index + 1}
+            </p>
+            <p className="text-xs text-slate-500">
+              {question.alternatives.length} alternativer
+            </p>
           </div>
-
-          {question.alternatives.map((alternative, idx) => (
-            <div
-              key={alternative.id}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-            >
-              <div className="flex items-start justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Alternativ {idx + 1}
-                </p>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={currentCorrectIds.includes(alternative.id)}
-                      onChange={() => toggleCorrectAnswer(alternative.id)}
-                    />
-                    Riktig svar
-                  </label>
-                  {question.alternatives.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAlternative(alternative.id)}
-                      className="rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-                    >
-                      Fjern
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <LocaleFieldEditor
-                label="Alternativ tekst"
-                value={alternative.altText}
-                onChange={(next) => updateAlternative(alternative.id, next)}
-                activeLanguage={activeLanguage}
-              />
-            </div>
-          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMinimized}
+            className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+            title={isMinimized ? 'Vis detaljer' : 'Skjul detaljer'}
+          >
+            {isMinimized ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+          <DuplicateButton
+            onClick={onDuplicate}
+            className="ml-2"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+          >
+            Fjern spørsmål
+          </button>
         </div>
       </div>
+
+      {/* Collapsible body */}
+      {!isMinimized && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-4 space-y-4">
+          <LocaleFieldEditor
+            label="Spørsmålstekst"
+            value={question.contentText}
+            onChange={(next) => updateLocaleField('contentText', next)}
+            activeLanguage={activeLanguage}
+            multiline
+          />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
+              <button
+                type="button"
+                onClick={addAlternative}
+                className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              >
+                Legg til alternativ
+              </button>
+            </div>
+
+            <DndContext sensors={alternativeSensors} onDragEnd={handleAlternativeDragEnd}>
+              <SortableContext
+                items={question.alternatives.map((alternative) => alternative.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {question.alternatives.map((alternative, idx) => (
+                    <SortableQuestionAlternative
+                      key={alternative.id}
+                      id={alternative.id}
+                      alternative={alternative}
+                      idx={idx}
+                      question={question}
+                      currentCorrectIds={currentCorrectIds}
+                      onToggleCorrect={toggleCorrectAnswer}
+                      onRemove={removeAlternative}
+                      onUpdate={updateAlternative}
+                      activeLanguage={activeLanguage}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

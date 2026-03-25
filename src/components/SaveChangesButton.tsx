@@ -7,7 +7,7 @@ type SaveChangesButtonProps = {
   type?: 'button' | 'submit' | 'reset';
   loading?: boolean;
   disabled?: boolean;
-  onClick?: MouseEventHandler<HTMLButtonElement>;
+  onClickAction?: MouseEventHandler<HTMLButtonElement>;
   idleLabel?: string;
   loadingLabel?: string;
   minLoadingMs?: number;
@@ -17,7 +17,7 @@ type SaveChangesButtonProps = {
 const DEFAULT_MIN_LOADING_MS = 900;
 
 const BASE_CLASS_NAME =
-  'inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-slate-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-70';
+  'cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-slate-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-70';
 
 function normalizeMinLoadingMs(value: number) {
   if (!Number.isFinite(value)) {
@@ -31,7 +31,7 @@ export default function SaveChangesButton({
   type = 'submit',
   loading = false,
   disabled = false,
-  onClick,
+  onClickAction,
   idleLabel = 'Lagre endringer',
   loadingLabel = 'Lagrer …',
   minLoadingMs = DEFAULT_MIN_LOADING_MS,
@@ -65,7 +65,7 @@ export default function SaveChangesButton({
       startLoading();
     }
 
-    onClick?.(event);
+    onClickAction?.(event);
   };
 
   useEffect(() => {

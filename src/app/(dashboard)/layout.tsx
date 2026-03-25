@@ -50,15 +50,11 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="space-y-2 text-center">
-          <p className="text-sm uppercase tracking-wide text-slate-500">
-            Laster
-          </p>
-          <p className="text-lg font-semibold text-slate-700">
-            Klargjør IKontroll …
-          </p>
-        </div>
+      <div className="flex h-screen flex-col bg-slate-50">
+        <Topbar />
+        <main className="flex flex-1 items-center justify-center bg-slate-50">
+          <p className="text-sm font-semibold text-slate-500">Klargjør IKontroll …</p>
+        </main>
       </div>
     );
   }

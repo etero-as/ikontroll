@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import Link from 'next/link';
+import DuplicateButton from '@/components/DuplicateButton';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import {
@@ -24,6 +25,7 @@ import type {
   CourseStatus,
   LocaleStringMap,
 } from '@/types/course';
+import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 
 type CourseFormValues = {
   title: string;
@@ -66,6 +68,20 @@ const normalizeLocaleMap = (value: unknown): LocaleStringMap => {
     return value as LocaleStringMap;
   }
   return { no: String(value) };
+};
+
+const normalizeLanguages = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return ['no'];
+  }
+  const next = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+  if (!next.length) {
+    return ['no'];
+  }
+  return Array.from(new Set(next));
 };
 
 const buildDuplicateTitle = (course: Course | null) => {
@@ -130,10 +146,11 @@ export default function CourseManager() {
   };
 
   const handleCreateCourse = async (values: CourseFormValues) => {
+    if (!companyId || !profile) {
+      setFormError('Mangler selskapskontekst');
+      return;
+    }
     try {
-      if (!companyId || !profile) {
-        throw new Error('Mangler selskapskontekst');
-      }
       const expirationFields = resolveExpirationFields(values);
       const payload: CoursePayload = {
         companyId,
@@ -141,6 +158,7 @@ export default function CourseManager() {
         title: { no: values.title.trim() },
         description: { no: (values.description ?? '').trim() },
         status: values.status,
+        languages: ['no'],
         ...expirationFields,
       };
       const id = await createCourse(payload);
@@ -170,10 +188,11 @@ export default function CourseManager() {
 
   const handleDuplicateCourse = async (values: DuplicateCourseFormValues) => {
     if (!duplicateTarget) return;
+    if (!companyId || !profile) {
+      setDuplicateError('Mangler selskapskontekst');
+      return;
+    }
     try {
-      if (!companyId || !profile) {
-        throw new Error('Mangler selskapskontekst');
-      }
       const trimmedTitle = values.title.trim();
       if (!trimmedTitle) {
         setDuplicateError('Du må angi en tittel for kopien.');
@@ -185,17 +204,20 @@ export default function CourseManager() {
       const sourceRef = doc(db, 'courses', duplicateTarget.id);
       const sourceSnap = await getDoc(sourceRef);
       if (!sourceSnap.exists()) {
-        throw new Error('Fant ikke kurset du vil duplisere.');
+        setDuplicateError('Fant ikke kurset du vil duplisere.');
+        return;
       }
       const sourceData = sourceSnap.data();
       const nextTitle = {
         ...normalizeLocaleMap(sourceData.title),
         no: trimmedTitle,
       };
+      const nextLanguages = normalizeLanguages(sourceData.languages);
 
       const newCourseRef = await addDoc(collection(db, 'courses'), {
         ...sourceData,
         title: nextTitle,
+        languages: nextLanguages,
         companyId,
         createdById: profile.id,
         createdAt: serverTimestamp(),
@@ -335,15 +357,13 @@ export default function CourseManager() {
                         >
                           Administrer
                         </Link>
-                        <button
+                        <DuplicateButton
                           onClick={() => {
                             setDuplicateError(null);
                             setDuplicateTarget(course);
                           }}
-                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          Dupliser
-                        </button>
+                          className="inline-flex appearance-none items-center cursor-pointer leading-normal font-sans"
+                        />
                         <button
                           onClick={() => handleDeleteCourse(course)}
                           className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-red-600 hover:border-red-300 hover:bg-red-50"
@@ -385,6 +405,68 @@ export default function CourseManager() {
   );
 }
 
+const CourseModalFrame = ({
+  tag,
+  title,
+  onClose,
+  onSubmit,
+  submitLabel,
+  loading = false,
+  children,
+}: {
+  tag: string;
+  title: string;
+  onClose: () => void;
+  onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
+  submitLabel: string;
+  loading?: boolean;
+  children: ReactNode;
+}) => {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              {tag}
+            </p>
+            <h4 className="text-2xl font-semibold text-slate-900">{title}</h4>
+          </div>
+          <button
+            onClick={onClose}
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:opacity-60"
+            aria-label="Lukk"
+            disabled={loading}
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          {children}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              disabled={loading}
+            >
+              Avbryt
+            </button>
+            <button
+              type="submit"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              disabled={loading}
+            >
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const CreateCourseModal = ({
   onSubmit,
   onClose,
@@ -412,154 +494,57 @@ const CreateCourseModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Nytt kurs
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">Kursinformasjon</h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700"
-            aria-label="Lukk"
-          >
-            ×
-          </button>
-        </div>
+    <CourseModalFrame
+      tag="Nytt kurs"
+      title="Kursinformasjon"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitLabel="Lagre og administrer"
+    >
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Tittel</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <input
+          {...form.register('title', { required: true })}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Beskrivelse</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <textarea
+          {...form.register('description')}
+          rows={3}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        Status
+        <select
+          {...form.register('status')}
+          className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        >
+          <option value="active">Aktiv</option>
+          <option value="inactive">Inaktiv</option>
+        </select>
+      </label>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <input
-              {...form.register('title', { required: true })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Beskrivelse</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <textarea
-              {...form.register('description')}
-              rows={3}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            Status
-            <select
-              {...form.register('status')}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            >
-              <option value="active">Aktiv</option>
-              <option value="inactive">Inaktiv</option>
-            </select>
-          </label>
+      <CourseExpirationFields form={form} expirationType={expirationType} />
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">Utløp</p>
-            <div className="mt-3 flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Type
-                <select
-                  {...form.register('expirationType')}
-                  className="w-fit min-w-[12rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="none">Ingen utløp</option>
-                  <option value="days">Antall dager</option>
-                  <option value="months">Antall måneder</option>
-                  <option value="date">Dato</option>
-                </select>
-              </label>
-
-              {(expirationType === 'days' || expirationType === 'months') && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  {expirationType === 'days' ? 'Dager' : 'Måneder'}
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    {...form.register('expirationAmount', {
-                      valueAsNumber: true,
-                      validate: (value) =>
-                        expirationType === 'days' || expirationType === 'months'
-                          ? typeof value === 'number' &&
-                            Number.isFinite(value) &&
-                            value > 0
-                            ? true
-                            : 'Angi et gyldig antall.'
-                          : true,
-                    })}
-                    className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationAmount?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationAmount.message}
-                    </span>
-                  )}
-                </label>
-              )}
-
-              {expirationType === 'date' && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  Dato
-                  <input
-                    type="date"
-                    {...form.register('expirationDate', {
-                      validate: (value) =>
-                        expirationType === 'date'
-                          ? value?.trim()
-                            ? true
-                            : 'Velg en dato.'
-                          : true,
-                    })}
-                    className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationDate?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationDate.message}
-                    </span>
-                  )}
-                </label>
-              )}
-            </div>
-          </div>
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Lagre og administrer
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {errorMessage && (
+        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
+      )}
+    </CourseModalFrame>
   );
 };
 
@@ -590,65 +575,33 @@ const DuplicateCourseModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Dupliser kurs
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">Gi kopien et navn</h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:opacity-60"
-            aria-label="Lukk"
-            disabled={loading}
-          >
-            ×
-          </button>
-        </div>
+    <CourseModalFrame
+      tag="Dupliser kurs"
+      title="Gi kopien et navn"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitLabel={loading ? 'Dupliserer …' : 'Dupliser kurs'}
+      loading={loading}
+    >
+      <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <span className="flex items-center justify-between">
+          <span>Tittel</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            NO
+          </span>
+        </span>
+        <input
+          {...form.register('title', { required: true })}
+          className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          disabled={loading}
+        />
+      </label>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <input
-              {...form.register('title', { required: true })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              disabled={loading}
-            />
-          </label>
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              disabled={loading}
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
-              disabled={loading}
-            >
-              {loading ? 'Dupliserer …' : 'Dupliser kurs'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {errorMessage && (
+        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
+      )}
+    </CourseModalFrame>
   );
 };

@@ -42,7 +42,7 @@ const ConsumerNavbar = () => {
     <>
       {/* Desktop/Tablet Top Bar */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 md:px-8">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-8">
             <Link href="/my-courses" className="text-xl font-bold text-slate-900">
               IKontroll

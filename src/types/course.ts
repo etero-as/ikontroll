@@ -23,6 +23,7 @@ export interface Course {
   description: LocaleStringMap;
   courseImageUrl?: string | null;
   status: CourseStatus;
+  languages?: string[];
   expirationType?: CourseExpirationType;
   expirationDays?: number | null;
   expirationMonths?: number | null;
@@ -56,6 +57,7 @@ export interface CourseModule {
   imageUrls: LocaleStringArrayMap;
   order: number;
   questions: CourseQuestion[];
+  languages?: string[];
   moduleType?: CourseModuleType;
   examPassPercentage?: number;
   createdAt?: Date;

@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
 } from 'react';
+import Link from 'next/link';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,6 +43,10 @@ import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
 import SaveChangesButton from '@/components/SaveChangesButton';
+import DuplicateButton from '@/components/DuplicateButton';
+import DragHandle from '@/components/DragHandle';
+import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
+import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
 import {
   Course,
@@ -81,16 +86,6 @@ type DuplicateModuleFormValues = {
   title: string;
   mode: 'same' | 'other';
   targetCourseId?: string;
-};
-
-const STATUS_LABELS: Record<'active' | 'inactive', string> = {
-  active: 'Aktiv',
-  inactive: 'Inaktiv',
-};
-
-const STATUS_STYLES: Record<'active' | 'inactive', string> = {
-  active: 'bg-emerald-100 text-emerald-700',
-  inactive: 'bg-slate-100 text-slate-600',
 };
 
 const createEmptyLocaleMap = (languages: string[]): LocaleStringMap =>
@@ -134,14 +129,12 @@ const clampPercentage = (value: number) => Math.min(100, Math.max(0, value));
 const SortableModuleItem = ({
   module,
   activeLanguage,
-  courseId,
   onOpen,
   onDelete,
   onDuplicate,
 }: {
   module: CourseModule;
   activeLanguage: string;
-  courseId: string;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (module: CourseModule) => void;
@@ -160,32 +153,13 @@ const SortableModuleItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100"
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <button
-            type="button"
-            className="mt-1 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 cursor-grab active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-            aria-label="Endre rekkefølge"
-            title="Endre rekkefølge"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            >
-              <path d="M5 8h14M5 12h14M5 16h14" strokeLinecap="round" />
-            </svg>
-          </button>
+          <DragHandle attributes={attributes} listeners={listeners} className="mt-1" />
           <div
-            className="flex-1 cursor-pointer rounded-xl border border-transparent px-1 py-0.5 transition hover:border-slate-200"
+            className="flex-1 cursor-pointer rounded-xl px-2 py-1 hover:bg-slate-100"
             onClick={() => onOpen(module.id)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -196,70 +170,36 @@ const SortableModuleItem = ({
             role="button"
             tabIndex={0}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h4 className="text-lg font-semibold text-slate-900">
-                  {getLocaleValue(module.title, activeLanguage) || 'Uten tittel'}
-                </h4>
-                {getLocaleValue(module.summary, activeLanguage) && (
-                  <p className="text-sm text-slate-500">
-                    {getLocaleValue(module.summary, activeLanguage)}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500">
-                  {module.questions.length} kontrollspørsmål
+            <div>
+              <h4 className="text-lg font-semibold text-slate-900">
+                {getLocaleValue(module.title, activeLanguage) || 'Uten tittel'}
+              </h4>
+              {getLocaleValue(module.summary, activeLanguage) && (
+                <p className="text-sm text-slate-500">
+                  {getLocaleValue(module.summary, activeLanguage)}
                 </p>
-                {isExamModule && (
-                  <p className="text-xs font-semibold text-indigo-600">
-                    Eksamen
-                    {typeof module.examPassPercentage === 'number'
-                      ? ` · Krav ${module.examPassPercentage}%`
-                      : ''}
-                  </p>
-                )}
-              </div>
-              <div className="mt-1 text-slate-500">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 15a3 3 0 1 0-3-3 3 3 0 0 0 3 3" />
-                  <path d="M19.4 15a2 2 0 0 0 .4 2l.1.1a1.999 1.999 0 1 1-2.83 2.83l-.1-.1a2 2 0 0 0-2-.4 2 2 0 0 0-1.4 1.9V21a2 2 0 0 1-4 0v-.2a2 2 0 0 0-1.4-1.9 2 2 0 0 0-2 .4l-.1.1a1.999 1.999 0 1 1-2.83-2.83l.1-.1a2 2 0 0 0 .4-2 2 2 0 0 0-1.9-1.4H3a2 2 0 0 1 0-4h.2a2 2 0 0 0 1.9-1.4 2 2 0 0 0-.4-2l-.1-.1a1.999 1.999 0 1 1 2.83-2.83l.1.1a2 2 0 0 0 2 .4 2 2 0 0 0 1.4-1.9V3a2 2 0 0 1 4 0v.2a2 2 0 0 0 1.4 1.9 2 2 0 0 0 2-.4l.1-.1a1.999 1.999 0 1 1 2.83 2.83l-.1.1a2 2 0 0 0-.4 2 2 2 0 0 0 1.9 1.4H21a2 2 0 0 1 0 4h-.2a2 2 0 0 0-1.9 1.4Z" />
-                </svg>
-              </div>
+              )}
+              <p className="text-xs text-slate-500">
+                {module.questions.length} kontrollspørsmål
+              </p>
+              {isExamModule && (
+                <p className="text-xs font-semibold text-indigo-600">
+                  Eksamen
+                  {typeof module.examPassPercentage === 'number'
+                    ? ` · Krav ${module.examPassPercentage}%`
+                    : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onDuplicate(module)}
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-          >
-            Dupliser
-          </button>
+          <DuplicateButton onClick={() => onDuplicate(module)} />
           <button
             onClick={() => onDelete(module.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:border-red-300 hover:bg-red-50"
-            title="Slett emne"
-            aria-label="Slett emne"
+            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            >
-              <path d="M18 6L6 18" />
-              <path d="M6 6l12 12" />
-            </svg>
+            Fjern emne
           </button>
         </div>
       </div>
@@ -270,7 +210,7 @@ const SortableModuleItem = ({
 export default function CourseDetailManager({ courseId }: { courseId: string }) {
   const router = useRouter();
   const { companyId } = useAuth();
-  const { course, loading, error } = useCourse(courseId);
+  const { course } = useCourse(courseId);
   const { courses: allCourses } = useCourses(companyId ?? null);
   const {
     modules,
@@ -438,25 +378,22 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   useEffect(() => {
     if (!course) return;
-    const mergedLanguages = Array.from(
-      new Set([
-        ...DEFAULT_LANGUAGES,
-        ...Object.keys(course.title ?? {}),
-        ...Object.keys(course.description ?? {}),
-        ...languages,
-      ]),
-    );
-    setLanguages(mergedLanguages);
-    const ensureCourseLocales = (map: LocaleStringMap | undefined) => {
-      const base = createEmptyLocaleMap(mergedLanguages);
-      if (!map) {
-        return base;
-      }
-      mergedLanguages.forEach((lang) => {
-        base[lang] = map[lang] ?? '';
-      });
-      return base;
-    };
+    const isFirstLoad = initializedCourseIdRef.current !== course.id;
+    if (isFirstLoad) {
+      initializedCourseIdRef.current = course.id;
+      const nextLangs = course.languages?.length
+        ? course.languages
+        : Array.from(
+            new Set([
+              ...DEFAULT_LANGUAGES,
+              ...Object.keys(course.title ?? {}),
+              ...Object.keys(course.description ?? {}),
+            ]),
+          );
+      setLanguages(nextLangs);
+    } else if (course.languages?.length) {
+      setLanguages(course.languages);
+    }
     form.reset({
       title: course.title,
       description: course.description ?? { no: '' },
@@ -472,6 +409,8 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const [languageInput, setLanguageInput] = useState('');
   const languageInputRef = useRef<HTMLInputElement | null>(null);
+  const initializedCourseIdRef = useRef<string | null>(null);
+  const hasDiscoveredModuleLanguages = useRef(false);
   const [savingCourseInfo, setSavingCourseInfo] = useState(false);
   const statusValue = form.watch('status') ?? 'inactive';
   const expirationType = form.watch('expirationType') ?? 'none';
@@ -480,7 +419,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
-    const discovered = new Set(DEFAULT_LANGUAGES);
+    setCourseImageUrl(course?.courseImageUrl ?? null);
+    if (course?.languages?.length || hasDiscoveredModuleLanguages.current) return;
+    const discovered = new Set<string>();
     modules.forEach((module) => {
       Object.keys(module.body ?? {}).forEach((lang) => discovered.add(lang));
       module.questions.forEach((question) => {
@@ -493,11 +434,10 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         });
       });
     });
-    setLanguages((prev) => {
-      const union = new Set([...prev, ...discovered]);
-      return Array.from(union);
-    });
-    setCourseImageUrl(course?.courseImageUrl ?? null);
+    if (discovered.size) {
+      hasDiscoveredModuleLanguages.current = true;
+      setLanguages((prev) => Array.from(new Set([...prev, ...discovered])));
+    }
   }, [modules, course]);
 
   useEffect(() => {
@@ -631,6 +571,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         imageUrls: imageMap,
         order: nextOrder,
         questions,
+        languages: targetLanguages,
         moduleType: isExamModule ? 'exam' : 'normal',
         ...(isExamModule ? { examPassPercentage: sanitizedPassPercentage } : {}),
       };
@@ -708,6 +649,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
       const nextTitle = { ...(duplicateTarget.title ?? {}) };
       nextTitle.no = trimmedTitle;
+      const nextLanguages = Array.isArray(duplicateTarget.languages)
+        ? duplicateTarget.languages
+        : Object.keys(nextTitle);
 
       const payload: CourseModulePayload = {
         title: nextTitle,
@@ -718,6 +662,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         imageUrls: duplicateTarget.imageUrls ?? {},
         order: maxOrder + 1,
         questions: duplicateTarget.questions ?? [],
+        languages: nextLanguages,
         moduleType: duplicateTarget.moduleType ?? 'normal',
         ...(duplicateTarget.moduleType === 'exam' &&
         typeof duplicateTarget.examPassPercentage === 'number'
@@ -773,7 +718,35 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       ensureCourseLocales(form.getValues('description')),
       { shouldDirty: true },
     );
+  };
 
+  const removeLanguage = (lang: string) => {
+    if (languages.length <= 1) return;
+    const nextLanguages = languages.filter((l) => l !== lang);
+    setLanguages(nextLanguages);
+    if (activeLanguage === lang) {
+      setActiveLanguage(nextLanguages[0]);
+    }
+    const stripKey = (map: LocaleStringMap | undefined): LocaleStringMap => {
+      const next = { ...(map ?? {}) };
+      delete next[lang];
+      return next;
+    };
+    form.setValue('title', stripKey(form.getValues('title')), { shouldDirty: true });
+    form.setValue('description', stripKey(form.getValues('description')), { shouldDirty: true });
+  };
+
+  const handleRemoveActiveLanguage = () => {
+    if (languages.length <= 1) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Fjern spraket ${activeLanguage.toUpperCase()} fra kurset?`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    removeLanguage(activeLanguage);
   };
 
   const handleCourseInfoSave = form.handleSubmit(async (values) => {
@@ -830,6 +803,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         description: normalizedDescription,
         courseImageUrl: courseImageUrl ?? null,
         status: values.status,
+        languages,
         ...expirationPayload,
         updatedAt: serverTimestamp(),
       });
@@ -924,7 +898,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               key={module.id}
               module={module}
               activeLanguage={activeLanguage}
-              courseId={courseId}
               onOpen={handleOpenModule}
               onDelete={handleDeleteModule}
               onDuplicate={(target) => {
@@ -944,14 +917,27 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/courses"
+            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
+            ← Tilbake til kursoversikt
+          </Link>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Kursadministrasjon
+          </p>
+        </div>
+      </div>
+      <div className="flex min-h-18 flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {languages.map((lang) => (
             <button
               key={lang}
               type="button"
               onClick={() => setActiveLanguage(lang)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
                 activeLanguage === lang
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -977,7 +963,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               />
               <button
                 type="submit"
-                className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 Legg til
               </button>
@@ -987,24 +973,36 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                   setIsAddingLanguage(false);
                   setLanguageInput('');
                 }}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
                 aria-label="Avbryt"
               >
                 ×
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setIsAddingLanguage(true);
-                setLanguageInput('');
-              }}
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              aria-label="Legg til språk"
-            >
-              +
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingLanguage(true);
+                  setLanguageInput('');
+                }}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                aria-label="Legg til språk"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveActiveLanguage}
+                disabled={languages.length <= 1}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
+                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+              >
+                -
+              </button>
+            </>
           )}
         </div>
         <label
@@ -1012,15 +1010,15 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           className="flex items-center gap-2 text-sm font-medium text-slate-700"
         >
           <span>Status</span>
-          <select
+          <SelectWithToggleIcon
             id="course-status-select"
             value={statusValue}
             onChange={handleStatusChange}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <option value="active">Aktiv</option>
             <option value="inactive">Inaktiv</option>
-          </select>
+          </SelectWithToggleIcon>
         </label>
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -1040,9 +1038,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={handleDeleteCourse}
-            className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Slett kurs
+            Fjern kurs
           </button>
         </div>
 
@@ -1099,74 +1097,11 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             />
           </label>
 
-          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">Utløp</p>
-            <div className="mt-3 flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                Type
-                <select
-                  {...form.register('expirationType')}
-                  className="w-fit min-w-[12rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="none">Ingen utløp</option>
-                  <option value="days">Antall dager</option>
-                  <option value="months">Antall måneder</option>
-                  <option value="date">Dato</option>
-                </select>
-              </label>
-
-              {(expirationType === 'days' || expirationType === 'months') && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  {expirationType === 'days' ? 'Dager' : 'Måneder'}
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    {...form.register('expirationAmount', {
-                      valueAsNumber: true,
-                      validate: (value) =>
-                        expirationType === 'days' || expirationType === 'months'
-                          ? typeof value === 'number' &&
-                            Number.isFinite(value) &&
-                            value > 0
-                            ? true
-                            : 'Angi et gyldig antall.'
-                          : true,
-                    })}
-                    className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationAmount?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationAmount.message}
-                    </span>
-                  )}
-                </label>
-              )}
-
-              {expirationType === 'date' && (
-                <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                  Dato
-                  <input
-                    type="date"
-                    {...form.register('expirationDate', {
-                      validate: (value) =>
-                        expirationType === 'date'
-                          ? value?.trim()
-                            ? true
-                            : 'Velg en dato.'
-                          : true,
-                    })}
-                    className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                  {form.formState.errors.expirationDate?.message && (
-                    <span className="text-xs font-semibold text-red-600">
-                      {form.formState.errors.expirationDate.message}
-                    </span>
-                  )}
-                </label>
-              )}
-            </div>
-          </div>
+          <CourseExpirationFields
+            form={form}
+            expirationType={expirationType}
+            className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4"
+          />
 
           <div className="md:col-span-2 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between">
@@ -1180,7 +1115,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 <button
                   type="button"
                   onClick={handleRemoveCourseImage}
-                  className="rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                  className="cursor-pointer rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
                   disabled={uploadingImage}
                 >
                   Fjern bilde
@@ -1188,7 +1123,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               )}
             </div>
             <div className="flex items-center gap-4">
-              <label className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
+              <label className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
                 <span>{uploadingImage ? 'Laster opp …' : 'Velg bilde'}</span>
                 <input
                   type="file"
@@ -1221,17 +1156,17 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             <button
               type="button"
               onClick={handlePreviewCourse}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Forhåndsvis
             </button>
-            <SaveChangesButton type="button" onClick={handleCourseInfoSave} loading={savingCourseInfo} />
+            <SaveChangesButton type="button" onClickAction={handleCourseInfoSave} loading={savingCourseInfo} />
           </div>
         </form>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border-b border-slate-100 px-2 pb-4 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Emner
@@ -1242,7 +1177,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={openCreateModule}
-            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
             + Nytt emne
           </button>
@@ -1352,7 +1287,7 @@ const ModuleQuickCreateModal = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Lukk"
             disabled={loading}
           >
@@ -1498,14 +1433,14 @@ const ModuleQuickCreateModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               Avbryt
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
               disabled={loading}
             >
               Opprett og administrer
@@ -1580,7 +1515,7 @@ const DuplicateModuleModal = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Lukk"
             disabled={loading}
           >
@@ -1643,7 +1578,7 @@ const DuplicateModuleModal = ({
               Kurs
               <select
                 {...form.register('targetCourseId')}
-                className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 disabled={!hasOtherCourses || loading}
               >
                 {otherCourses.map((course) => (
@@ -1665,14 +1600,14 @@ const DuplicateModuleModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               Avbryt
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
               disabled={loading}
             >
               {loading ? 'Dupliserer …' : 'Dupliser emne'}

@@ -10,7 +10,7 @@ import { useCustomer } from '@/hooks/useCustomer';
 
 type MenuPosition = { top: number; right: number };
 
-export const Topbar = () => {
+export function Topbar() {
   const {
     profile,
     logout,
@@ -71,12 +71,8 @@ export const Topbar = () => {
       setPosition(null);
       return;
     }
-
     const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) {
-      return;
-    }
-
+    if (!rect) return;
     setPosition({
       top: rect.bottom + 8,
       right: window.innerWidth - rect.right,
@@ -89,7 +85,6 @@ export const Topbar = () => {
     setPosition(null);
     await logout();
   };
-
 
   const canSwitchView = hasConsumerAccess && (isCustomerAdmin || isSystemOwner);
 
@@ -144,7 +139,7 @@ export const Topbar = () => {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
+      <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
         <div className="flex items-center gap-4">
           <span className="text-lg font-semibold tracking-wide text-slate-900">
             IKontroll
@@ -155,7 +150,7 @@ export const Topbar = () => {
               <span className="font-semibold text-slate-900">
                 {activeCustomer?.companyName ??
                   customerMemberships.find(
-                    (membership) => membership.customerId === activeCustomerId,
+                    (m) => m.customerId === activeCustomerId,
                   )?.customerName ??
                   activeCustomerId ??
                   'Velg kunde'}
@@ -163,7 +158,6 @@ export const Topbar = () => {
             </div>
           )}
         </div>
-
         <button
           ref={buttonRef}
           onClick={toggleMenu}
@@ -177,5 +171,4 @@ export const Topbar = () => {
       {menu}
     </>
   );
-};
-
+}
