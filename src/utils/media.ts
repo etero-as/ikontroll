@@ -124,3 +124,16 @@ export const getLocalizedMediaItems = (
   return [];
 };
 
+export const getFileNameFromUrl = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    const pathname = decodeURIComponent(parsed.pathname);
+    const segments = pathname.split('/');
+    const candidate = segments.pop();
+    return candidate && candidate.trim() ? candidate : parsed.hostname;
+  } catch {
+    const parts = url.split('/');
+    return decodeURIComponent(parts[parts.length - 1] || url);
+  }
+};
+
