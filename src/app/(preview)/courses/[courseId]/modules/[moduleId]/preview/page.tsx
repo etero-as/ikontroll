@@ -6,65 +6,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
-import { getLocalizedMediaItems } from '@/utils/media';
+import { getFileNameFromUrl, getLocalizedMediaItems } from '@/utils/media';
+import {
+  getLocalizedList,
+  getLocalizedValue,
+  getPreferredLocale,
+} from '@/utils/localization';
 import type {
   CourseQuestion,
   CourseQuestionAlternative,
-  LocaleStringArrayMap,
-  LocaleStringMap,
 } from '@/types/course';
-
-const getPreferredLocale = (
-  available: string[],
-  requested: string | null,
-): string => {
-  if (!available.length) return requested ?? 'no';
-  const normalizedRequested = requested?.slice(0, 2).toLowerCase();
-  if (normalizedRequested && available.includes(normalizedRequested)) {
-    return normalizedRequested;
-  }
-  const browserLang =
-    typeof window !== 'undefined'
-      ? window.navigator.language.slice(0, 2).toLowerCase()
-      : null;
-  const candidates = [normalizedRequested, browserLang, 'no', 'en'].filter(
-    Boolean,
-  ) as string[];
-  for (const candidate of candidates) {
-    if (available.includes(candidate)) {
-      return candidate;
-    }
-  }
-  return available[0];
-};
-
-const getLocalizedValue = (
-  value: LocaleStringMap | undefined,
-  locale: string,
-): string => {
-  if (!value) return '';
-  return (
-    value[locale] ??
-    value.no ??
-    value.en ??
-    Object.values(value).find((entry) => entry?.trim()) ??
-    ''
-  );
-};
-
-const getLocalizedList = (
-  value: LocaleStringArrayMap | undefined,
-  locale: string,
-): string[] => {
-  if (!value) return [];
-  return (
-    value[locale] ??
-    value.no ??
-    value.en ??
-    Object.values(value).find((entry) => entry && entry.length) ??
-    []
-  );
-};
 
 const isYouTubeUrl = (url: string): boolean =>
   /youtu\.be|youtube\.com/.test(url.toLowerCase());
@@ -96,9 +47,7 @@ const getCorrectAnswerIds = (question: CourseQuestion): string[] => {
     : [];
   const altIds = alternatives.map((alt) => alt.id).filter(Boolean);
   const rawCorrectIds = Array.isArray(question.correctAnswerIds)
-    ? question.correctAnswerIds.filter(
-        (id): id is string => typeof id === 'string' && altIds.includes(id),
-      )
+    ? question.correctAnswerIds.filter((id): id is string => altIds.includes(id))
     : [];
   if (rawCorrectIds.length > 0) {
     return rawCorrectIds;
@@ -375,36 +324,63 @@ export default function ModulePreviewPage({
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
           <h2 className="text-xl font-semibold text-slate-900">Mediegalleri</h2>
           <div className="mt-4 grid gap-6 md:grid-cols-2">
-            {mediaItems.map((item) =>
-              item.type === 'image' ? (
+            {mediaItems.map((item) => {
+              if (item.type === 'image') {
+                return (
+                  <div
+                    key={item.id}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
+                  >
+                    <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                  </div>
+                );
+              }
+
+              if (item.type === 'video') {
+                return (
+                  <div
+                    key={item.id}
+                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black"
+                  >
+                    {isYouTubeUrl(item.url) ? (
+                      <iframe
+                        src={item.url}
+                        title="Modulvideo"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="aspect-video w-full"
+                      />
+                    ) : (
+                      <video controls className="aspect-video w-full">
+                        <source src={item.url} />
+                        Nettleseren din støtter ikke video.
+                      </video>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
                 <div
                   key={item.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
+                  className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-center"
                 >
-                  <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                  <span className="text-4xl" role="img" aria-label="PDF">
+                    📄
+                  </span>
+                  <p className="text-xs font-semibold text-slate-700 break-all">
+                    {getFileNameFromUrl(item.url)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Åpne PDF
+                  </button>
                 </div>
-              ) : (
-                <div
-                  key={item.id}
-                  className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black"
-                >
-                  {isYouTubeUrl(item.url) ? (
-                    <iframe
-                      src={item.url}
-                      title="Modulvideo"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="aspect-video w-full"
-                    />
-                  ) : (
-                    <video controls className="aspect-video w-full">
-                      <source src={item.url} />
-                      Nettleseren din støtter ikke video.
-                    </video>
-                  )}
-                </div>
-              ),
-            )}
+              );
+            })}
           </div>
         </section>
       )}
