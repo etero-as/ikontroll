@@ -44,3 +44,4 @@ jobs:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
         run: firebase deploy --project internkontroll-8e12a --non-interactive
+
