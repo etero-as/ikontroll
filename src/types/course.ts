@@ -64,9 +64,7 @@ export interface CourseModule {
   updatedAt?: Date;
 }
 
-export interface CoursePayload
-  extends Omit<Course, 'id' | 'createdAt' | 'updatedAt'> {}
+export type CoursePayload = Omit<Course, 'id' | 'createdAt' | 'updatedAt'>;
 
-export interface CourseModulePayload
-  extends Omit<CourseModule, 'id' | 'courseId' | 'createdAt' | 'updatedAt'> {}
+export type CourseModulePayload = Omit<CourseModule, 'id' | 'courseId' | 'createdAt' | 'updatedAt'>;
 
