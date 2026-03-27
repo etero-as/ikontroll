@@ -2,6 +2,13 @@
   "name": "portal",
   "version": "0.1.0",
   "private": true,
+  "_comments": {
+    "critical_versions": "DO NOT upgrade next, eslint, eslint-config-next, firebase-admin without checking DEPLOYMENT.md",
+    "next": "Max 15.5.14 - Firebase Frameworks preview only supports Next.js 12-15.0. Next 16+ causes 500 errors in Cloud Run production",
+    "eslint_config": "eslint 9.39.4 and eslint-config-next 15.5.14 MUST match next version. ESLint 10+ uses different flat config format incompatible with Next 15. See eslint.config.mjs for FlatCompat wrapper usage",
+    "firebase_admin": "13.7.0+ supports Application Default Credentials. Code falls back to ADC in Cloud Run (no env var), uses service account key locally (.env.local). See src/lib/firebaseAdmin.ts",
+    "firebase_frameworks": "See https://firebase.google.com/docs/hosting/frameworks/nextjs - only supports Next.js 12-15.0 officially"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
