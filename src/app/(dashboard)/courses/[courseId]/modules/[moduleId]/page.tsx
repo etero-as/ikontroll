@@ -1379,6 +1379,7 @@ const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
     </div>
   );
 });
+MediaDragOverlay.displayName = 'MediaDragOverlay';
 
 const SortableMediaCard = ({
   item,
