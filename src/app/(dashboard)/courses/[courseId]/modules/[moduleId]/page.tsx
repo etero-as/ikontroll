@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
@@ -726,6 +727,15 @@ export default function CourseModuleDetailPage() {
   );
 }
 
+const LocaleEditorHeader = ({ label, activeLanguage }: { label: string; activeLanguage: string }) => (
+  <div className="flex items-center justify-between">
+    <p className="text-sm font-semibold text-slate-700">{label}</p>
+    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      {activeLanguage.toUpperCase()}
+    </span>
+  </div>
+);
+
 const LocaleFieldEditor = ({
   label,
   value,
@@ -784,12 +794,7 @@ const LocaleFieldEditor = ({
 
   return (
     <div className={`${containerClassName ? `${containerClassName} ` : ''}space-y-2`}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-700">{label}</p>
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {activeLanguage.toUpperCase()}
-        </span>
-      </div>
+      <LocaleEditorHeader label={label} activeLanguage={activeLanguage} />
       {field}
     </div>
   );
@@ -882,7 +887,7 @@ const QuillEditor = ({
     }
     lastHtmlRef.current = quill.root.innerHTML;
     updateTableActions(quill.getSelection());
-  }, [formats, modules, onChange, value]);
+  }, [formats, modules, onChange, updateTableActions, value]);
 
   useEffect(() => {
     const quill = quillRef.current;
@@ -1054,12 +1059,7 @@ const LocaleRichEditor = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-700">{label}</p>
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {activeLanguage.toUpperCase()}
-        </span>
-      </div>
+      <LocaleEditorHeader label={label} activeLanguage={activeLanguage} />
       <QuillEditor
         value={currentValue}
         onChange={handleChange}
@@ -1088,7 +1088,7 @@ const LocaleMediaEditor = ({
   courseId: string;
   moduleId: string;
 }) => {
-  const items = media?.[activeLanguage] ?? [];
+  const items = useMemo(() => media?.[activeLanguage] ?? [], [media, activeLanguage]);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
@@ -1215,12 +1215,7 @@ const LocaleMediaEditor = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-700">{label}</p>
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {activeLanguage.toUpperCase()}
-        </span>
-      </div>
+      <LocaleEditorHeader label={label} activeLanguage={activeLanguage} />
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
           Ingen media er lagt til for dette språket ennå.
@@ -1364,9 +1359,9 @@ const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
           {typeLabel}
         </span>
       </div>
-      <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+      <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
         {item.type === 'image' ? (
-          <img src={item.url} alt="" className="h-full w-full object-contain" />
+          <Image fill src={item.url} alt="" className="object-contain" sizes="(max-width: 768px) 100vw, 33vw" />
         ) : item.type === 'video' ? (
           <div className="flex h-full w-full items-center justify-center text-4xl">🎥</div>
         ) : (
@@ -1433,14 +1428,16 @@ const SortableMediaCard = ({
         </div>
       </div>
       <div className="flex flex-col gap-3">
-        <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+        <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
           {mediaError ? (
             <MediaErrorFallback url={item.url} type={item.type} />
           ) : item.type === 'image' ? (
-            <img
+            <Image
+              fill
               src={item.url}
               alt="Forhåndsvis media"
-              className="h-full w-full object-contain"
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 33vw"
               onError={() => setMediaError(true)}
             />
           ) : item.type === 'video' ? (
