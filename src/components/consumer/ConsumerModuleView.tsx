@@ -9,6 +9,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import type {
   Course,
   CourseModule,
@@ -121,8 +122,9 @@ export default function ConsumerModuleView({
   const searchParams = useSearchParams();
   const requestedLang = searchParams.get('lang');
   const { firebaseUser } = useAuth();
+  const { locale: preferredLocale } = useLocale();
   const { completedModules, setModuleCompletion } = useCourseProgress(course.id);
-  const { modules } = useCourseModules(course.id); // Needed to find next module
+  const { modules } = useCourseModules(course.id);
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
@@ -143,8 +145,8 @@ export default function ConsumerModuleView({
   }, [module, course]);
 
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales, requestedLang),
-    [availableLocales, requestedLang],
+    () => getPreferredLocale(availableLocales, requestedLang ?? preferredLocale),
+    [availableLocales, requestedLang, preferredLocale],
   );
 
   const t = getTranslation(locale);

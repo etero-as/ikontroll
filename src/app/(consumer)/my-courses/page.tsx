@@ -10,8 +10,9 @@ import { useConsumerCourses } from '@/hooks/useConsumerCourses';
 import { useCustomer } from '@/hooks/useCustomer';
 import type { Course } from '@/types/course';
 import type { CustomerMembership } from '@/types/companyUser';
-import { getLocalizedValue, getPreferredLocale } from '@/utils/localization';
+import { getLocalizedValue } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
+import { useLocale } from '@/context/LocaleContext';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 
@@ -19,7 +20,7 @@ export default function MyCoursesPage() {
   const { profile, activeCustomerId, setActiveCustomerId, firebaseUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [locale] = useState(() => getPreferredLocale(['no', 'en']));
+  const { locale } = useLocale();
   const [courseCode, setCourseCode] = useState('');
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [redeemMessage, setRedeemMessage] = useState<string | null>(null);

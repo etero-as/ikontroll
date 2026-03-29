@@ -8,12 +8,13 @@ import { useAllCourseProgress } from '@/hooks/useCourseProgress';
 import { useConsumerCourses } from '@/hooks/useConsumerCourses';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import type { Course } from '@/types/course';
-import { getLocalizedValue, getPreferredLocale } from '@/utils/localization';
+import { getLocalizedValue } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function ProfilePage() {
   const { profile } = useAuth();
-  const [locale, setLocale] = useState('no');
+  const { locale } = useLocale();
   
   const { progress, loading: progressLoading } = useAllCourseProgress();
   
@@ -25,11 +26,6 @@ export default function ProfilePage() {
 
   const { courses, loading: coursesLoading } = useConsumerCourses(candidateCourseIds);
 
-  useEffect(() => {
-    // setLocale is safe to call here as it's just setting initial state based on browser
-    const detected = getPreferredLocale(['no', 'en']);
-    setLocale(detected);
-  }, []);
 
   const t = getTranslation(locale);
 

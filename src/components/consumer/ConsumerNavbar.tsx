@@ -3,10 +3,11 @@
 import { GraduationCap, LogOut, Menu, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
-import { getPreferredLocale } from '@/utils/localization';
+import { useLocale } from '@/context/LocaleContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getTranslation } from '@/utils/translations';
 
 const ConsumerNavbar = () => {
@@ -17,14 +18,10 @@ const ConsumerNavbar = () => {
     isCustomerAdmin,
     isSystemOwner,
   } = useAuth();
+  const { locale, setLocale } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [locale, setLocale] = useState('no');
-
-  useEffect(() => {
-    setLocale(getPreferredLocale(['no', 'en']));
-  }, []);
 
   const t = getTranslation(locale);
 
@@ -87,6 +84,7 @@ const ConsumerNavbar = () => {
                   Adminvisning
                 </button>
               )}
+              <LanguageSwitcher locale={locale} onChange={setLocale} />
               <Link
                 href="/profile"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
