@@ -8,8 +8,10 @@ import {
   useState,
   type ChangeEvent,
   type CSSProperties,
+  type ReactNode,
 } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import {
@@ -39,6 +41,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
@@ -48,6 +51,7 @@ import DragHandle from '@/components/DragHandle';
 import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
 import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
+import { getTranslation } from '@/utils/translations';
 import {
   Course,
   CourseModule,
@@ -101,13 +105,10 @@ const getLocaleValue = (map: LocaleStringMap | undefined, lang = 'no') => {
   return firstEntry ?? '';
 };
 
-const buildDuplicateModuleTitle = (module: CourseModule | null, lang = 'no') => {
+const buildDuplicateModuleTitle = (module: CourseModule | null, lang = 'no', copyOfLabel = 'Kopi av') => {
   if (!module) return '';
   const baseTitle = getLocaleValue(module.title, lang).trim();
-  if (!baseTitle) {
-    return 'Kopi av emne';
-  }
-  return `Kopi av ${baseTitle}`;
+  return baseTitle ? `${copyOfLabel} ${baseTitle}` : copyOfLabel;
 };
 
 const createEmptyLocaleArrayMap = (
@@ -139,6 +140,8 @@ const SortableModuleItem = ({
   onDelete: (id: string) => void;
   onDuplicate: (module: CourseModule) => void;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: module.id });
   const isExamModule = module.moduleType === 'exam';
@@ -172,7 +175,7 @@ const SortableModuleItem = ({
           >
             <div>
               <h4 className="text-lg font-semibold text-slate-900">
-                {getLocaleValue(module.title, activeLanguage) || 'Uten tittel'}
+                {getLocaleValue(module.title, activeLanguage) || t.common.untitled}
               </h4>
               {getLocaleValue(module.summary, activeLanguage) && (
                 <p className="text-sm text-slate-500">
@@ -180,13 +183,13 @@ const SortableModuleItem = ({
                 </p>
               )}
               <p className="text-xs text-slate-500">
-                {module.questions.length} kontrollspørsmål
+                {t.admin.courseDetail.questionCount(module.questions.length)}
               </p>
               {isExamModule && (
                 <p className="text-xs font-semibold text-indigo-600">
-                  Eksamen
+                  {t.common.exam}
                   {typeof module.examPassPercentage === 'number'
-                    ? ` · Krav ${module.examPassPercentage}%`
+                    ? t.admin.courseDetail.examPassLabel(module.examPassPercentage)
                     : ''}
                 </p>
               )}
@@ -194,12 +197,12 @@ const SortableModuleItem = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <DuplicateButton onClick={() => onDuplicate(module)} />
+          <DuplicateButton onClick={() => onDuplicate(module)}>{t.common.duplicate}</DuplicateButton>
           <button
             onClick={() => onDelete(module.id)}
             className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Fjern emne
+            {t.admin.courseDetail.removeModule}
           </button>
         </div>
       </div>
@@ -210,6 +213,8 @@ const SortableModuleItem = ({
 export default function CourseDetailManager({ courseId }: { courseId: string }) {
   const router = useRouter();
   const { companyId } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const { course } = useCourse(courseId);
   const { courses: allCourses } = useCourses(companyId ?? null);
   const {
@@ -513,7 +518,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     if (!trimmedTitle) {
-      setQuickCreateError('Du må angi en tittel.');
+      setQuickCreateError(t.admin.courseDetail.titleRequiredCreate);
       return false;
     }
 
@@ -543,13 +548,13 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       if (isExamModule) {
         if (examImportMode === 'all') {
           if (!importableQuestionCount) {
-            setQuickCreateError('Det finnes ingen spørsmål å importere.');
+            setQuickCreateError(t.admin.courseDetail.noQuestionsToImport);
             return false;
           }
           questions = importableQuestions;
         } else if (examImportMode === 'representative') {
           if (!importableQuestionCount) {
-            setQuickCreateError('Det finnes ingen spørsmål å importere.');
+            setQuickCreateError(t.admin.courseDetail.noQuestionsToImport);
             return false;
           }
           questions = buildRepresentativeQuestions();
@@ -583,7 +588,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     } catch (err) {
       console.error('Failed to create module', err);
       setQuickCreateError(
-        err instanceof Error ? err.message : 'Kunne ikke opprette emnet.',
+        err instanceof Error ? err.message : t.admin.courseDetail.createModuleError,
       );
       return false;
     } finally {
@@ -595,14 +600,14 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     const target = modules.find((m) => m.id === moduleId);
     if (!target) return;
     const confirmed = window.confirm(
-      `Slett emnet "${getLocaleValue(target.title, activeLanguage)}"? Dette kan ikke angres.`,
+      t.admin.courseDetail.confirmDeleteModule(getLocaleValue(target.title, activeLanguage)),
     );
     if (!confirmed) return;
     try {
       await deleteModule(moduleId);
     } catch (err) {
       console.error('Failed to delete module', err);
-      alert('Kunne ikke slette emnet.');
+      alert(t.admin.courseDetail.deleteModuleError);
     }
   };
 
@@ -615,7 +620,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       setDuplicateError(null);
       const trimmedTitle = values.title.trim();
       if (!trimmedTitle) {
-        setDuplicateError('Du må angi en tittel.');
+        setDuplicateError(t.admin.courseDetail.titleRequiredCreate);
         return;
       }
 
@@ -623,7 +628,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         values.mode === 'other' ? values.targetCourseId?.trim() : courseId;
 
       if (!destinationCourseId) {
-        setDuplicateError('Velg et kurs å kopiere emnet til.');
+        setDuplicateError(t.admin.courseDetail.selectTargetCourse);
         return;
       }
 
@@ -680,7 +685,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     } catch (err) {
       console.error('Failed to duplicate module', err);
       setDuplicateError(
-        err instanceof Error ? err.message : 'Kunne ikke duplisere emnet.',
+        err instanceof Error ? err.message : t.admin.courseDetail.duplicateModuleError,
       );
     } finally {
       setDuplicating(false);
@@ -741,7 +746,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       return;
     }
     const confirmed = window.confirm(
-      `Fjern spraket ${activeLanguage.toUpperCase()} fra kurset?`,
+      t.admin.courseDetail.confirmRemoveLanguage(activeLanguage.toUpperCase()),
     );
     if (!confirmed) {
       return;
@@ -809,7 +814,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       });
     } catch (err) {
       console.error('Failed to update course', err);
-      alert('Kunne ikke oppdatere kursinformasjon.');
+      alert(t.admin.courseDetail.saveCourseError);
     } finally {
       setSavingCourseInfo(false);
     }
@@ -818,7 +823,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const handleDeleteCourse = async () => {
     if (!course) return;
     const confirmed = window.confirm(
-      `Slett kurset "${getLocaleValue(course.title)}"? Dette kan ikke angres.`,
+      t.admin.courseDetail.confirmDeleteCourse(getLocaleValue(course.title)),
     );
     if (!confirmed) return;
     try {
@@ -826,7 +831,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       router.push('/courses');
     } catch (err) {
       console.error('Failed to delete course', err);
-      alert('Kunne ikke slette kurset.');
+      alert(t.admin.courseDetail.deleteCourseError);
     }
   };
 
@@ -858,7 +863,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     } catch (err) {
       console.error('Failed to upload course image', err);
       setImageError(
-        err instanceof Error ? err.message : 'Kunne ikke laste opp bilde.',
+        err instanceof Error ? err.message : t.admin.courseDetail.imageUploadError,
       );
     } finally {
       setUploadingImage(false);
@@ -875,7 +880,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     } catch (err) {
       console.error('Failed to remove course image', err);
       setImageError(
-        err instanceof Error ? err.message : 'Kunne ikke fjerne bilde.',
+        err instanceof Error ? err.message : t.admin.courseDetail.imageRemoveError,
       );
     } finally {
       setUploadingImage(false);
@@ -911,7 +916,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     </DndContext>
   ) : (
     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-      Ingen emner er opprettet ennå. Klikk “Nytt emne” for å komme i gang.
+      {t.admin.courseDetail.noModulesYet}
     </div>
   );
 
@@ -923,10 +928,10 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             href="/courses"
             className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kursoversikt
+            {t.admin.courses.backToCourseList}
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Kursadministrasjon
+            {t.admin.courses.courseAdmin}
           </p>
         </div>
       </div>
@@ -958,14 +963,14 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 ref={languageInputRef}
                 value={languageInput}
                 onChange={(e) => setLanguageInput(e.target.value)}
-                placeholder="Språkkode"
+                placeholder={t.common.languageCode}
                 className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
               />
               <button
                 type="submit"
                 className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
               >
-                Legg til
+                {t.common.add}
               </button>
               <button
                 type="button"
@@ -974,7 +979,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                   setLanguageInput('');
                 }}
                 className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                aria-label="Avbryt"
+                aria-label={t.common.cancel}
               >
                 ×
               </button>
@@ -988,7 +993,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                   setLanguageInput('');
                 }}
                 className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label="Legg til språk"
+                aria-label={t.common.addLanguage}
               >
                 +
               </button>
@@ -997,8 +1002,8 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 onClick={handleRemoveActiveLanguage}
                 disabled={languages.length <= 1}
                 className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
-                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+                aria-label={t.common.removeLanguageLabel(activeLanguage.toUpperCase())}
+                title={t.common.removeLanguageTitle(activeLanguage.toUpperCase())}
               >
                 -
               </button>
@@ -1009,15 +1014,15 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           htmlFor="course-status-select"
           className="flex items-center gap-2 text-sm font-medium text-slate-700"
         >
-          <span>Status</span>
+          <span>{t.common.status}</span>
           <SelectWithToggleIcon
             id="course-status-select"
             value={statusValue}
             onChange={handleStatusChange}
             className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
-            <option value="active">Aktiv</option>
-            <option value="inactive">Inaktiv</option>
+            <option value="active">{t.admin.courses.activeStatus}</option>
+            <option value="inactive">{t.admin.courses.inactiveStatus}</option>
           </SelectWithToggleIcon>
         </label>
       </div>
@@ -1025,14 +1030,14 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Kursinformasjon
+              {t.admin.courseDetail.courseInfoLabel}
             </p>
             <h2 className="text-2xl font-semibold text-slate-900">
               {getLocaleValue(course?.title, activeLanguage) || '…'}
             </h2>
             {course?.createdAt && (
               <p className="text-xs text-slate-500">
-                Opprettet {course.createdAt.toLocaleString('no-NO')}
+                {t.admin.courseDetail.createdAt(course.createdAt.toLocaleString(locale === 'en' ? 'en-GB' : 'no-NO'))}
               </p>
             )}
           </div>
@@ -1040,14 +1045,14 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
             onClick={handleDeleteCourse}
             className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Fjern kurs
+            {t.admin.courseDetail.deleteCourse}
           </button>
         </div>
 
         <form onSubmit={handleCourseInfoSave} className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
             <span className="flex items-center justify-between">
-              <span>Tittel</span>
+              <span>{t.common.title}</span>
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {activeLanguage.toUpperCase()}
               </span>
@@ -1072,7 +1077,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </label>
           <label className="md:col-span-2 flex flex-col gap-1 text-sm font-medium text-slate-700">
             <span className="flex items-center justify-between">
-              <span>Beskrivelse</span>
+              <span>{t.common.description}</span>
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {activeLanguage.toUpperCase()}
               </span>
@@ -1106,9 +1111,9 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           <div className="md:col-span-2 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-700">Forsidebilde</p>
+                <p className="text-sm font-semibold text-slate-700">{t.admin.courseDetail.coverImageLabel}</p>
                 <p className="text-xs text-slate-500">
-                  Last opp et bilde som representerer kurset. Anbefalt størrelse 1200x600 px.
+                  {t.admin.courseDetail.coverImageHint}
                 </p>
               </div>
               {courseImageUrl && !uploadingImage && (
@@ -1118,13 +1123,13 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                   className="cursor-pointer rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
                   disabled={uploadingImage}
                 >
-                  Fjern bilde
+                  {t.admin.courseDetail.removeImage}
                 </button>
               )}
             </div>
             <div className="flex items-center gap-4">
               <label className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
-                <span>{uploadingImage ? 'Laster opp …' : 'Velg bilde'}</span>
+                <span>{uploadingImage ? t.common.uploading : t.admin.courseDetail.chooseImage}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1135,15 +1140,17 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               </label>
               {courseImageUrl ? (
                 <div className="relative h-28 w-48 overflow-hidden rounded-xl border border-slate-200">
-                  <img
+                  <Image
                     src={courseImageUrl}
-                    alt="Forhåndsvisning av kursbilde"
-                    className="h-full w-full object-cover"
+                    alt={t.admin.courseDetail.courseImagePreviewAlt}
+                    fill
+                    className="object-cover"
+                    sizes="192px"
                   />
                 </div>
               ) : (
                 <div className="flex h-28 w-48 items-center justify-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
-                  Ingen bilde valgt
+                  {t.admin.courseDetail.noImageSelected}
                 </div>
               )}
             </div>
@@ -1158,7 +1165,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               onClick={handlePreviewCourse}
               className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Forhåndsvis
+              {t.common.preview}
             </button>
             <SaveChangesButton type="button" onClickAction={handleCourseInfoSave} loading={savingCourseInfo} />
           </div>
@@ -1169,17 +1176,17 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         <div className="flex flex-col gap-3 rounded-xl border-b border-slate-100 px-2 pb-4 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Emner
+              {t.admin.courseDetail.modulesLabel}
             </p>
             <p className="text-sm text-slate-500">
-              Bakgrunnsinnhold og kontrollspørsmål for kurset.
+              {t.admin.courseDetail.modulesSubtitle}
             </p>
           </div>
           <button
             onClick={openCreateModule}
             className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            + Nytt emne
+            {t.admin.courseDetail.newModule}
           </button>
         </div>
 
@@ -1191,13 +1198,13 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
         {modulesLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-slate-500">
-            Laster emner …
+            {t.admin.courseDetail.loadingModules}
           </div>
         ) : (
           <div className="mt-4">{moduleList}</div>
         )}
         {ordering && (
-          <p className="mt-3 text-xs text-slate-400">Lagrer rekkefølgen …</p>
+          <p className="mt-3 text-xs text-slate-400">{t.admin.courseDetail.savingOrder}</p>
         )}
         {orderingError && (
           <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -1231,6 +1238,85 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   );
 }
 
+const BaseModal = ({
+  onClose,
+  loading,
+  subtitle,
+  title,
+  children,
+}: {
+  onClose: () => void;
+  loading: boolean;
+  subtitle: string;
+  title: string;
+  children: ReactNode;
+}) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{subtitle}</p>
+            <h4 className="text-2xl font-semibold text-slate-900">{title}</h4>
+          </div>
+          <button
+            onClick={onClose}
+            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={t.common.close}
+            disabled={loading}
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const ModalFormFooter = ({
+  onClose,
+  loading,
+  errorMessage,
+  submitLabel,
+}: {
+  onClose: () => void;
+  loading: boolean;
+  errorMessage: string | null;
+  submitLabel: string;
+}) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  return (
+    <>
+      {errorMessage && (
+        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {errorMessage}
+        </p>
+      )}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading}
+        >
+          {t.common.cancel}
+        </button>
+        <button
+          type="submit"
+          className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+          disabled={loading}
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </>
+  );
+};
+
 const ModuleQuickCreateModal = ({
   onClose,
   onSubmit,
@@ -1244,6 +1330,8 @@ const ModuleQuickCreateModal = ({
   errorMessage: string | null;
   importableQuestionCount: number;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const form = useForm<ModuleQuickCreateFormValues>({
     defaultValues: {
       title: '',
@@ -1274,181 +1362,148 @@ const ModuleQuickCreateModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Nytt emne
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">
-              Grunnleggende informasjon
-            </h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label="Lukk"
+    <BaseModal
+      onClose={onClose}
+      loading={loading}
+      subtitle={t.admin.courseDetail.newModuleModalLabel}
+      title={t.admin.courseDetail.newModuleModalTitle}
+    >
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+          <span className="flex items-center justify-between">
+            <span>{t.common.title}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              NO
+            </span>
+          </span>
+          <input
+            {...form.register('title', { required: t.common.titleRequired })}
+            className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            placeholder={t.admin.courseDetail.moduleNamePlaceholder}
+            autoFocus
             disabled={loading}
-          >
-            ×
-          </button>
+          />
+          {form.formState.errors.title?.message && (
+            <p className="text-xs font-semibold text-red-600">
+              {form.formState.errors.title.message}
+            </p>
+          )}
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+          <span className="flex items-center justify-between">
+            <span>{t.common.description}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              NO
+            </span>
+          </span>
+          <textarea
+            {...form.register('description')}
+            rows={4}
+            className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            placeholder={t.admin.courseDetail.moduleDescPlaceholder}
+            disabled={loading}
+          />
+        </label>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-700">{t.admin.courseDetail.moduleTypeLabel}</p>
+          <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <input
+                type="radio"
+                value="normal"
+                {...form.register('moduleType')}
+                disabled={loading}
+              />
+              {t.admin.courseDetail.normalModule}
+            </label>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <input
+                type="radio"
+                value="exam"
+                {...form.register('moduleType')}
+                disabled={loading}
+              />
+              {t.common.exam}
+            </label>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <input
-              {...form.register('title', { required: 'Tittel er påkrevd.' })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              placeholder="Gi emnet et navn"
-              autoFocus
-              disabled={loading}
-            />
-            {form.formState.errors.title?.message && (
-              <p className="text-xs font-semibold text-red-600">
-                {form.formState.errors.title.message}
+        {moduleType === 'exam' && (
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">{t.admin.courseDetail.examSetupLabel}</p>
+              <p className="text-xs text-slate-500">
+                {t.admin.courseDetail.availableQuestions(importableQuestionCount)}
+              </p>
+            </div>
+            <div className="grid gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="radio"
+                  value="all"
+                  {...form.register('examImportMode')}
+                  disabled={loading || importableQuestionCount === 0}
+                />
+                {t.admin.courseDetail.importAllQuestions}
+              </label>
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="radio"
+                  value="representative"
+                  {...form.register('examImportMode')}
+                  disabled={loading || importableQuestionCount === 0}
+                />
+                {t.admin.courseDetail.importRepresentative}
+              </label>
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="radio"
+                  value="blank"
+                  {...form.register('examImportMode')}
+                  disabled={loading}
+                />
+                {t.admin.courseDetail.startBlankExam}
+              </label>
+            </div>
+            {importableQuestionCount === 0 && (
+              <p className="text-xs text-amber-600">
+                {t.admin.courseDetail.noQuestionsInCourse}
               </p>
             )}
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Beskrivelse</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                NO
-              </span>
-            </span>
-            <textarea
-              {...form.register('description')}
-              rows={4}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              placeholder="Kort beskrivelse eller introduksjon"
-              disabled={loading}
-            />
-          </label>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">Modultype</p>
-            <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <input
-                  type="radio"
-                  value="normal"
-                  {...form.register('moduleType')}
-                  disabled={loading}
-                />
-                Vanlig modul
-              </label>
-              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <input
-                  type="radio"
-                  value="exam"
-                  {...form.register('moduleType')}
-                  disabled={loading}
-                />
-                Eksamen
-              </label>
-            </div>
-          </div>
-
-          {moduleType === 'exam' && (
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Eksamensoppsett</p>
-                <p className="text-xs text-slate-500">
-                  Tilgjengelige spørsmål: {importableQuestionCount}
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm text-slate-700">
-                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="radio"
-                    value="all"
-                    {...form.register('examImportMode')}
-                    disabled={loading || importableQuestionCount === 0}
-                  />
-                  Importer alle spørsmål
-                </label>
-                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="radio"
-                    value="representative"
-                    {...form.register('examImportMode')}
-                    disabled={loading || importableQuestionCount === 0}
-                  />
-                  Importer representativt utvalg
-                </label>
-                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="radio"
-                    value="blank"
-                    {...form.register('examImportMode')}
-                    disabled={loading}
-                  />
-                  Start med tom eksamen
-                </label>
-              </div>
-              {importableQuestionCount === 0 && (
-                <p className="text-xs text-amber-600">
-                  Det finnes ingen spørsmål å importere i dette kurset.
+            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+              <span>{t.admin.courseDetail.passRequirementPct}</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                {...form.register('examPassPercentage', {
+                  valueAsNumber: true,
+                  min: { value: 0, message: t.admin.courseDetail.passRequirementRange },
+                  max: { value: 100, message: t.admin.courseDetail.passRequirementRange },
+                })}
+                className="w-32 rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                disabled={loading}
+              />
+              {form.formState.errors.examPassPercentage?.message && (
+                <p className="text-xs font-semibold text-red-600">
+                  {form.formState.errors.examPassPercentage.message}
                 </p>
               )}
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-                <span>Beståelseskrav (%)</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  {...form.register('examPassPercentage', {
-                    valueAsNumber: true,
-                    min: { value: 0, message: 'Må være mellom 0 og 100.' },
-                    max: { value: 100, message: 'Må være mellom 0 og 100.' },
-                  })}
-                  className="w-32 rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  disabled={loading}
-                />
-                {form.formState.errors.examPassPercentage?.message && (
-                  <p className="text-xs font-semibold text-red-600">
-                    {form.formState.errors.examPassPercentage.message}
-                  </p>
-                )}
-              </label>
-            </div>
-          )}
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
-            </p>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loading}
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
-              disabled={loading}
-            >
-              Opprett og administrer
-            </button>
+            </label>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <ModalFormFooter
+          onClose={onClose}
+          loading={loading}
+          errorMessage={errorMessage}
+          submitLabel={t.admin.courseDetail.createAndManage}
+        />
+      </form>
+    </BaseModal>
   );
 };
 
@@ -1471,6 +1526,8 @@ const DuplicateModuleModal = ({
   loading: boolean;
   activeLanguage: string;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const form = useForm<DuplicateModuleFormValues>({
     defaultValues: { title: '', mode: 'same', targetCourseId: '' },
   });
@@ -1490,13 +1547,13 @@ const DuplicateModuleModal = ({
     const currentTarget = form.getValues('targetCourseId');
     const fallbackCourseId = otherCourses[0]?.id ?? '';
     form.reset({
-      title: buildDuplicateModuleTitle(module, activeLanguage),
+      title: buildDuplicateModuleTitle(module, activeLanguage, t.admin.courseDetail.copyOfModule),
       mode: isNewModule ? 'same' : (currentMode ?? 'same'),
       targetCourseId: isNewModule
         ? fallbackCourseId
         : (currentTarget || fallbackCourseId),
     });
-  }, [module, activeLanguage, form, otherCourses]);
+  }, [module, activeLanguage, form, otherCourses, t.admin.courseDetail.copyOfModule]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     await onSubmit(values);
@@ -1504,117 +1561,86 @@ const DuplicateModuleModal = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Dupliser emne
-            </p>
-            <h4 className="text-2xl font-semibold text-slate-900">Gi kopien et navn</h4>
-          </div>
-          <button
-            onClick={onClose}
-            className="cursor-pointer text-slate-400 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label="Lukk"
-            disabled={loading}
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-            <span className="flex items-center justify-between">
-              <span>Tittel</span>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {activeLanguage.toUpperCase()}
-              </span>
+    <BaseModal
+      onClose={onClose}
+      loading={loading}
+      subtitle={t.admin.courseDetail.duplicateModuleLabel}
+      title={t.admin.courseDetail.nameTheCopy}
+    >
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+          <span className="flex items-center justify-between">
+            <span>{t.common.title}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {activeLanguage.toUpperCase()}
             </span>
+          </span>
+          <input
+            {...form.register('title', { required: t.common.titleRequired })}
+            className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            placeholder={t.admin.courseDetail.moduleNewNamePlaceholder}
+            disabled={loading}
+          />
+          {form.formState.errors.title?.message && (
+            <p className="text-xs font-semibold text-red-600">
+              {form.formState.errors.title.message}
+            </p>
+          )}
+        </label>
+
+        <div className="space-y-2 text-sm font-medium text-slate-700">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {t.admin.courseDetail.placementLabel}
+          </p>
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
             <input
-              {...form.register('title', { required: 'Tittel er påkrevd.' })}
-              className="rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              placeholder="Gi emnet et nytt navn"
+              type="radio"
+              value="same"
+              {...form.register('mode')}
               disabled={loading}
             />
-            {form.formState.errors.title?.message && (
-              <p className="text-xs font-semibold text-red-600">
-                {form.formState.errors.title.message}
-              </p>
-            )}
+            {t.admin.courseDetail.duplicateInThisCourse}
           </label>
-
-          <div className="space-y-2 text-sm font-medium text-slate-700">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Plassering
-            </p>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-              <input
-                type="radio"
-                value="same"
-                {...form.register('mode')}
-                disabled={loading}
-              />
-              Dupliser i dette kurset
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
-              <input
-                type="radio"
-                value="other"
-                {...form.register('mode')}
-                disabled={!hasOtherCourses || loading}
-              />
-              Kopier til et annet kurs
-            </label>
-            {!hasOtherCourses && (
-              <p className="text-xs text-slate-500">
-                Det finnes ingen andre kurs å kopiere emnet til.
-              </p>
-            )}
-          </div>
-
-          {mode === 'other' && (
-            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-              Kurs
-              <select
-                {...form.register('targetCourseId')}
-                className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                disabled={!hasOtherCourses || loading}
-              >
-                {otherCourses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {getLocaleValue(course.title) || 'Uten tittel'}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {errorMessage && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {errorMessage}
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+            <input
+              type="radio"
+              value="other"
+              {...form.register('mode')}
+              disabled={!hasOtherCourses || loading}
+            />
+            {t.admin.courseDetail.copyToOtherCourse}
+          </label>
+          {!hasOtherCourses && (
+            <p className="text-xs text-slate-500">
+              {t.admin.courseDetail.noOtherCourses}
             </p>
           )}
+        </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loading}
+        {mode === 'other' && (
+          <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+            {t.admin.courseDetail.courseSelectLabel}
+            <select
+              {...form.register('targetCourseId')}
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              disabled={!hasOtherCourses || loading}
             >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
-              disabled={loading}
-            >
-              {loading ? 'Dupliserer …' : 'Dupliser emne'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {otherCourses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {getLocaleValue(course.title) || t.common.untitled}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <ModalFormFooter
+          onClose={onClose}
+          loading={loading}
+          errorMessage={errorMessage}
+          submitLabel={loading ? t.admin.courseDetail.duplicatingModule : t.admin.courseDetail.duplicateModuleButton}
+        />
+      </form>
+    </BaseModal>
   );
 };

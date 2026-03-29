@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { User } from 'firebase/auth';
@@ -112,6 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [persistPortalMode],
   );
 
+  const portalModeStateRef = useRef(portalModeState);
+  portalModeStateRef.current = portalModeState;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -229,7 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           );
           setCustomerMemberships(adminMemberships);
 
-          const selectionPreference = portalModeState ?? null;
+          const selectionPreference = portalModeStateRef.current ?? null;
           const selectionPool =
             selectionPreference === 'user' && consumerMemberships.length
               ? consumerMemberships
@@ -278,7 +281,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       unsubscribe();
     };
-  }, [activeCustomerId, companyId, updateActiveCustomer, updateCompany]);
+  }, [activeCustomerId, companyId, persistPortalMode, updateActiveCustomer, updateCompany]);
 
   const isSystemOwner =
     (profile?.companyIds ?? []).some((company) => company.roles?.includes('admin'));

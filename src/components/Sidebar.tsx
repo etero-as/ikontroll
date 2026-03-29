@@ -6,43 +6,56 @@ import { usePathname } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 import { useCustomer } from '@/hooks/useCustomer';
-
-const OWNER_NAV_ITEMS: Array<{ href: string; label: string }> = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/customers', label: 'Kunder' },
-  { href: '/courses', label: 'Kurs' },
-  { href: '/templates', label: 'Maler' },
-];
-
-const CUSTOMER_NAV_ITEMS: Array<{ href: string; label: string }> = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/customer-courses', label: 'Kurs' },
-  { href: '/customer-users', label: 'Brukere' },
-];
-
-const SUBUNIT_NAV_ITEM = { href: '/customer-subunits', label: 'Underenheter' };
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export const Sidebar = () => {
   const pathname = usePathname();
   const { isSystemOwner, isCustomerAdmin, activeCustomerId } = useAuth();
   const shouldLoadCustomer = isCustomerAdmin ? activeCustomerId ?? null : null;
   const { customer: activeCustomer } = useCustomer(null, shouldLoadCustomer);
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
-  const customerNavItems = useMemo(() => {
-    if (!isCustomerAdmin) {
-      return [];
-    }
-    if (activeCustomer?.allowSubunits) {
-      return [
-        CUSTOMER_NAV_ITEMS[0],
-        SUBUNIT_NAV_ITEM,
-        ...CUSTOMER_NAV_ITEMS.slice(1),
-      ];
-    }
-    return CUSTOMER_NAV_ITEMS;
-  }, [isCustomerAdmin, activeCustomer?.allowSubunits]);
+  const ownerNavItems = useMemo(
+    () => [
+      { href: '/dashboard', label: t.admin.sidebar.nav.dashboard },
+      { href: '/customers', label: t.admin.sidebar.nav.customers },
+      { href: '/courses', label: t.admin.sidebar.nav.courses },
+      { href: '/templates', label: t.admin.sidebar.nav.templates },
+    ],
+    [t]
+  );
 
-  const navItems = isSystemOwner ? OWNER_NAV_ITEMS : customerNavItems;
+  const baseCustomerNavItems = useMemo(
+    () => [
+      { href: '/dashboard', label: t.admin.sidebar.nav.dashboard },
+      { href: '/customer-courses', label: t.admin.sidebar.nav.courses },
+      { href: '/customer-users', label: t.admin.sidebar.nav.users },
+    ],
+    [t]
+  );
+
+  const subunitNavItem = useMemo(
+    () => ({
+      href: '/customer-subunits',
+      label: t.admin.sidebar.nav.subunits,
+    }),
+    [t]
+  );
+
+  const customerNavItems = useMemo(
+    () => {
+      if (!isCustomerAdmin) return [];
+      if (activeCustomer?.allowSubunits) {
+        return [baseCustomerNavItems[0], subunitNavItem, ...baseCustomerNavItems.slice(1)];
+      }
+      return baseCustomerNavItems;
+    },
+    [isCustomerAdmin, activeCustomer?.allowSubunits, baseCustomerNavItems, subunitNavItem]
+  );
+
+  const navItems = isSystemOwner ? ownerNavItems : customerNavItems;
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-white">
@@ -64,10 +77,9 @@ export const Sidebar = () => {
           );
         })}
         {!navItems.length && (
-          <p className="text-sm text-slate-500">Ingen navigasjon tilgjengelig.</p>
+          <p className="text-sm text-slate-500">{t.admin.sidebar.noNavAvailable}</p>
         )}
       </nav>
     </aside>
   );
 };
-

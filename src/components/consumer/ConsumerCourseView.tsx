@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import type { Course } from '@/types/course';
 import type { CourseModule } from '@/types/course';
@@ -52,9 +53,11 @@ export default function ConsumerCourseView({
     return Array.from(set);
   }, [course, modules]);
 
+  const { locale: preferredLocale } = useLocale();
+
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales, requestedLang),
-    [availableLocales, requestedLang],
+    () => getPreferredLocale(availableLocales, requestedLang ?? preferredLocale),
+    [availableLocales, requestedLang, preferredLocale],
   );
 
   const t = getTranslation(locale);

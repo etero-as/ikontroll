@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 import { useCustomer } from '@/hooks/useCustomer';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 type MenuPosition = { top: number; right: number };
 
@@ -24,6 +27,8 @@ export function Topbar() {
   } = useAuth();
   const router = useRouter();
   const { customer: activeCustomer } = useCustomer(null, activeCustomerId ?? null);
+  const { locale, setLocale } = useLocale();
+  const t = getTranslation(locale);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +120,7 @@ export function Topbar() {
                 onClick={() => { setOpen(false); setPosition(null); }}
                 className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Min konto
+                {t.admin.topbar.myAccount}
               </Link>
             )}
             {canSwitchView && (
@@ -123,14 +128,14 @@ export function Topbar() {
                 onClick={() => handleSwitchMode(portalMode === 'admin' ? 'user' : 'admin')}
                 className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                {portalMode === 'admin' ? 'Gå til kursvisning' : 'Gå til adminvisning'}
+                {portalMode === 'admin' ? t.admin.topbar.goToCourseView : t.admin.topbar.goToAdminView}
               </button>
             )}
             <button
               onClick={handleLogout}
               className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Logg ut
+              {t.admin.topbar.logout}
             </button>
           </div>,
           document.body,
@@ -158,15 +163,18 @@ export function Topbar() {
             </div>
           )}
         </div>
-        <button
-          ref={buttonRef}
-          onClick={toggleMenu}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800"
-          aria-haspopup="menu"
-          aria-expanded={open}
-        >
-          {initials}
-        </button>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher locale={locale} onChange={setLocale} />
+          <button
+            ref={buttonRef}
+            onClick={toggleMenu}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800"
+            aria-haspopup="menu"
+            aria-expanded={open}
+          >
+            {initials}
+          </button>
+        </div>
       </header>
       {menu}
     </>

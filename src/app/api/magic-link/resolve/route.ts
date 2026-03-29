@@ -6,7 +6,6 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 
 const MAGIC_LINK_COLLECTION = adminDb.collection('magicLinks');
-const MAGIC_LINK_TTL_MS = Number(process.env.MAGIC_LINK_TTL_MS ?? 1000 * 60 * 30);
 
 interface MagicLinkData {
   authUid?: string;

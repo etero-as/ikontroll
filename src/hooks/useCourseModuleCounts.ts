@@ -9,7 +9,7 @@ type ModuleCountMap = Record<string, number>;
 
 export const useCourseModuleCounts = (courseIds: string[]): ModuleCountMap => {
   const [counts, setCounts] = useState<ModuleCountMap>({});
-  const sortedIds = useMemo(() => [...courseIds].sort(), [courseIds.join('|')]);
+  const sortedIds = useMemo(() => [...courseIds].sort(), [courseIds]);
 
   useEffect(() => {
     if (!sortedIds.length) {
@@ -36,8 +36,12 @@ export const useCourseModuleCounts = (courseIds: string[]): ModuleCountMap => {
     return () => {
       unsubscribes.forEach((unsub) => unsub());
     };
-  }, [sortedIds.join('|')]);
+  }, [sortedIds]);
 
   return useMemo(() => counts, [counts]);
 };
+
+
+
+
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Roboto_Mono } from 'next/font/google';
 
 import { AuthProvider } from '@/context/AuthContext';
+import { LocaleProvider } from '@/context/LocaleContext';
 
 import './globals.css';
 
@@ -30,7 +31,9 @@ export default function RootLayout({
       <body
         className={`${interSans.variable} ${mono.variable} bg-slate-50 text-slate-900 antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

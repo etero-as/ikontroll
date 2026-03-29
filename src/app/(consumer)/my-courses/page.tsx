@@ -10,8 +10,9 @@ import { useConsumerCourses } from '@/hooks/useConsumerCourses';
 import { useCustomer } from '@/hooks/useCustomer';
 import type { Course } from '@/types/course';
 import type { CustomerMembership } from '@/types/companyUser';
-import { getLocalizedValue, getPreferredLocale } from '@/utils/localization';
+import { getLocalizedValue } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
+import { useLocale } from '@/context/LocaleContext';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 
@@ -19,7 +20,7 @@ export default function MyCoursesPage() {
   const { profile, activeCustomerId, setActiveCustomerId, firebaseUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [locale] = useState(() => getPreferredLocale(['no', 'en']));
+  const { locale } = useLocale();
   const [courseCode, setCourseCode] = useState('');
   const [redeemError, setRedeemError] = useState<string | null>(null);
   const [redeemMessage, setRedeemMessage] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function MyCoursesPage() {
         });
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || 'Kunne ikke legge til kurset.');
+          throw new Error(payload.error || t.courses.courseAddError);
         }
         const data = (await response.json().catch(() => ({}))) as {
           customerId?: string;
@@ -77,20 +78,20 @@ export default function MyCoursesPage() {
         if (data.customerId && data.customerId !== activeCustomerId) {
           setActiveCustomerId(data.customerId);
         }
-        setRedeemMessage('Kurset er lagt til.');
+        setRedeemMessage(t.courses.courseAdded);
         if (!isAuto) {
           setCourseCode('');
         }
       } catch (err) {
         console.error('Failed to redeem course code', err);
         setRedeemError(
-          err instanceof Error ? err.message : 'Kunne ikke legge til kurset.',
+          err instanceof Error ? err.message : t.courses.courseAddError,
         );
       } finally {
         setRedeeming(false);
       }
     },
-    [activeCustomerId, firebaseUser, setActiveCustomerId],
+    [activeCustomerId, firebaseUser, setActiveCustomerId, t],
   );
 
   useEffect(() => {
@@ -153,9 +154,9 @@ export default function MyCoursesPage() {
 
       <section className="space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Legg til kurs med kode</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{t.courses.addCourseWithCode}</h2>
           <p className="text-sm text-slate-500">
-            Har du fått en kurskode? Skriv den inn her for å få tilgang.
+            {t.courses.addCourseWithCodeSubtitle}
           </p>
           <form
             onSubmit={(event) => {
@@ -169,7 +170,7 @@ export default function MyCoursesPage() {
               type="text"
               value={courseCode}
               onChange={(event) => setCourseCode(event.target.value)}
-              placeholder="Kurskode"
+              placeholder={t.courses.courseCodePlaceholder}
               className="flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
             />
             <button
@@ -177,7 +178,7 @@ export default function MyCoursesPage() {
               disabled={redeeming || !courseCode.trim()}
               className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {redeeming ? 'Legger til…' : 'Legg til kurs'}
+              {redeeming ? t.courses.addingCourse : t.courses.addCourse}
             </button>
           </form>
           {redeemMessage && <p className="mt-3 text-sm text-emerald-600">{redeemMessage}</p>}
@@ -200,11 +201,11 @@ export default function MyCoursesPage() {
           </div>
         ) : assignedCourseIds.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            Ingen kurs er tildelt denne kunden ennå.
+            {t.courses.noCoursesAssigned}
           </div>
         ) : courses.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            Kursdetaljer kunne ikke lastes inn.
+            {t.courses.coursesLoadError}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
@@ -9,6 +10,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import type {
   Course,
   CourseModule,
@@ -52,7 +54,7 @@ const MediaImage = ({
       </div>
     );
   }
-  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+  return <Image src={src} alt={alt} fill unoptimized className={className} onError={() => setError(true)} />;
 };
 
 const getAlternativeLabel = (
@@ -121,8 +123,9 @@ export default function ConsumerModuleView({
   const searchParams = useSearchParams();
   const requestedLang = searchParams.get('lang');
   const { firebaseUser } = useAuth();
+  const { locale: preferredLocale } = useLocale();
   const { completedModules, setModuleCompletion } = useCourseProgress(course.id);
-  const { modules } = useCourseModules(course.id); // Needed to find next module
+  const { modules } = useCourseModules(course.id);
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
@@ -143,8 +146,8 @@ export default function ConsumerModuleView({
   }, [module, course]);
 
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales, requestedLang),
-    [availableLocales, requestedLang],
+    () => getPreferredLocale(availableLocales, requestedLang ?? preferredLocale),
+    [availableLocales, requestedLang, preferredLocale],
   );
 
   const t = getTranslation(locale);
@@ -200,7 +203,7 @@ export default function ConsumerModuleView({
       return bodyHtml;
     }
   }, [bodyHtml]);
-  const questions = module.questions ?? [];
+  const questions = useMemo(() => module.questions ?? [], [module.questions]);
   const isModuleCompleted = completedModules.includes(module.id);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -811,10 +814,15 @@ export default function ConsumerModuleView({
                           <p className="text-sm font-semibold">Bildet er ikke å finne</p>
                         </div>
                       ) : (
-                        <img
+                        <Image
                           src={mediaPreview.url}
                           alt="Modulbilde"
-                          className="block w-auto h-auto max-w-full max-h-[85vh] object-contain"
+                          width={0}
+                          height={0}
+                          sizes="100vw"
+                          unoptimized
+                          className="block object-contain"
+                          style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '85vh' }}
                           onError={() => setPreviewImgError(true)}
                         />
                       )}
