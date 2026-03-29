@@ -6,7 +6,8 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/aut
 
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
-import { getPreferredLocale } from '@/utils/localization';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { getPreferredLocale, getSavedLocale } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
 
 export default function LoginPage() {
@@ -22,7 +23,7 @@ export default function LoginPage() {
 
   const [locale, setLocale] = useState('no');
   useEffect(() => {
-    setLocale(getPreferredLocale(['no', 'en']));
+    setLocale(getPreferredLocale(['no', 'en'], getSavedLocale()));
   }, []);
 
   const t = getTranslation(locale);
@@ -145,7 +146,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={showReset ? resetSubmitting : submitting}
-          className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+          className="w-full cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {showReset
             ? resetSubmitting
@@ -164,7 +165,7 @@ export default function LoginPage() {
                 setShowReset(false);
                 setResetMessage('');
               }}
-              className="text-slate-600 underline transition hover:text-slate-900"
+              className="cursor-pointer text-slate-600 underline transition hover:text-slate-900"
             >
               {t.auth.backToLogin}
             </button>
@@ -175,12 +176,14 @@ export default function LoginPage() {
                 setShowReset(true);
                 setError('');
               }}
-              className="text-slate-600 underline transition hover:text-slate-900"
+              className="cursor-pointer text-slate-600 underline transition hover:text-slate-900"
             >
               {t.auth.forgotPasswordLink}
             </button>
           )}
         </div>
+
+        <LanguageSwitcher locale={locale} onChange={setLocale} />
       </form>
     </main>
   );

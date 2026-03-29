@@ -1,5 +1,21 @@
 import { LocaleStringArrayMap, LocaleStringMap } from '@/types/course';
 
+const LOCALE_COOKIE = 'preferred_locale';
+
+export const getSavedLocale = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)preferred_locale=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+export const saveLocale = (locale: string): void => {
+  if (typeof document === 'undefined') return;
+  const maxAge = 60 * 60 * 24 * 365;
+  document.cookie = `${LOCALE_COOKIE}=${encodeURIComponent(locale)};path=/;max-age=${maxAge};SameSite=Lax`;
+};
+
+
+
 export const getPreferredLocale = (
   available: string[],
   requested: string | null = null,
