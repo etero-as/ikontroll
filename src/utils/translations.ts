@@ -26,7 +26,7 @@ export const translations = {
       forgotPasswordDescription:
         'Skriv inn e-posten din, så sender vi en lenke slik at du kan tilbakestille passordet.',
       sendReset: 'Send lenke',
-      resetSent: 'Vi har sendt deg en e-post med instruksjoner.',
+      resetSent: 'Hvis e-postadressen er registrert hos oss, vil du motta en e-post med en lenke for å tilbakestille passordet.',
       resetError: 'Kunne ikke sende e-post. Sjekk adressen og prøv igjen.',
       backToLogin: 'Tilbake til innlogging',
     },
@@ -114,7 +114,7 @@ export const translations = {
       forgotPasswordDescription:
         'Enter your email address and we will send you a link to reset your password.',
       sendReset: 'Send link',
-      resetSent: 'We just sent you an email with instructions.',
+      resetSent: 'If that email address is registered with us, you will receive a link to reset your password.',
       resetError: 'Could not send the email. Please check the address and try again.',
       backToLogin: 'Back to login',
     },
