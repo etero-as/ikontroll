@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { useAuth } from '@/context/AuthContext';
 import { db, storage } from '@/lib/firebase';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 type DiplomaFormValues = {
   title: string;
@@ -52,6 +55,8 @@ export default function TemplatesPage() {
     firebaseUser,
   } = useAuth();
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const [logoUrl, setLogoUrl] = useState('');
   const [signatureUrl, setSignatureUrl] = useState('');
   const [templateExists, setTemplateExists] = useState(false);
@@ -122,17 +127,17 @@ export default function TemplatesPage() {
       },
       (error) => {
         console.error('Failed to load diploma template', error);
-        setErrorMessage('Kunne ikke hente diplommale.');
+        setErrorMessage(t.admin.templates.loadError);
         setLoadingTemplate(false);
       },
     );
     return () => unsubscribe();
-  }, [companyId, defaultValues, form, isSystemOwner]);
+  }, [companyId, defaultValues, form, isSystemOwner, t]);
 
   if (!isSystemOwner) {
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Denne siden er kun tilgjengelig for systemeiere.
+        {t.admin.templates.ownerOnly}
       </section>
     );
   }
@@ -142,7 +147,7 @@ export default function TemplatesPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setErrorMessage('Logoen må være et bilde.');
+      setErrorMessage(t.admin.templates.logoMustBeImage);
       return;
     }
     setUploadingLogo(true);
@@ -154,10 +159,10 @@ export default function TemplatesPage() {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       setLogoUrl(url);
-      setSuccessMessage('Logo lastet opp.');
+      setSuccessMessage(t.admin.templates.logoUploadSuccess);
     } catch (error) {
       console.error('Failed to upload diploma logo', error);
-      setErrorMessage('Kunne ikke laste opp logoen.');
+      setErrorMessage(t.admin.templates.logoUploadError);
     } finally {
       setUploadingLogo(false);
       event.target.value = '';
@@ -183,19 +188,17 @@ export default function TemplatesPage() {
         },
         { merge: true },
       );
-      setSuccessMessage('Diplomalen er lagret.');
+      setSuccessMessage(t.admin.templates.saveSuccess);
     } catch (error) {
       console.error('Failed to save diploma template', error);
-      setErrorMessage('Kunne ikke lagre diplomet.');
+      setErrorMessage(t.admin.templates.saveError);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDownloadPreview = async () => {
-    if (!companyId || !firebaseUser || previewDownloading) {
-      return;
-    }
+    if (!companyId || !firebaseUser || previewDownloading) return;
     setPreviewDownloading(true);
     setPreviewError(null);
     try {
@@ -203,19 +206,11 @@ export default function TemplatesPage() {
       const response = await fetch('/api/diploma/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idToken,
-          companyId,
-          template: {
-            ...watchedValues,
-            logoUrl,
-            signatureUrl,
-          },
-        }),
+        body: JSON.stringify({ idToken, companyId, template: { ...watchedValues, logoUrl, signatureUrl } }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Kunne ikke laste ned forhåndsvisningen.');
+        throw new Error(payload.error || t.admin.templates.previewDownloadError);
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -228,9 +223,7 @@ export default function TemplatesPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download diploma preview', error);
-      setPreviewError(
-        error instanceof Error ? error.message : 'Kunne ikke laste ned forhåndsvisningen.',
-      );
+      setPreviewError(error instanceof Error ? error.message : t.admin.templates.previewDownloadError);
     } finally {
       setPreviewDownloading(false);
     }
@@ -251,17 +244,15 @@ export default function TemplatesPage() {
     <section className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Bibliotek
+          {t.admin.templates.library}
         </p>
-        <h1 className="text-3xl font-semibold text-slate-900">Diplommal</h1>
-        <p className="text-sm text-slate-500">
-          Tilpass diplomene som sendes ut når deltakere fullfører et kurs.
-        </p>
+        <h1 className="text-3xl font-semibold text-slate-900">{t.admin.templates.title}</h1>
+        <p className="text-sm text-slate-500">{t.admin.templates.subtitle}</p>
       </div>
 
       {loadingTemplate ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-          Laster diplominformasjon…
+          {t.admin.templates.loading}
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -270,15 +261,12 @@ export default function TemplatesPage() {
             className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
           >
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-slate-900">Innhold</h2>
-              <p className="text-sm text-slate-500">
-                Bruk plassholdere som {'{{participantName}}'}, {'{{courseName}}'},{' '}
-                {'{{customerName}}'}, {'{{completedDate}}'} og {'{{issuerName}}'}.
-              </p>
+              <h2 className="text-xl font-semibold text-slate-900">{t.admin.templates.contentSection}</h2>
+              <p className="text-sm text-slate-500">{t.admin.templates.contentHint}</p>
             </div>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              Tittel
+              {t.admin.templates.titleField}
               <input
                 {...form.register('title', { required: true })}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
@@ -286,7 +274,7 @@ export default function TemplatesPage() {
             </label>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              Standardtekst
+              {t.admin.templates.bodyField}
               <textarea
                 {...form.register('body', { required: true })}
                 rows={5}
@@ -295,7 +283,7 @@ export default function TemplatesPage() {
             </label>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              Bunntekst
+              {t.admin.templates.footerField}
               <textarea
                 {...form.register('footer', { required: true })}
                 rows={2}
@@ -305,14 +293,14 @@ export default function TemplatesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                Utsteder
+                {t.admin.templates.issuerField}
                 <input
                   {...form.register('issuerName', { required: true })}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                 />
               </label>
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                Aksentfarge
+                {t.admin.templates.accentColorField}
                 <input
                   type="color"
                   {...form.register('accentColor')}
@@ -323,14 +311,14 @@ export default function TemplatesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                Signatur - navn
+                {t.admin.templates.signatureNameField}
                 <input
                   {...form.register('signatureName')}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                 />
               </label>
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                Signatur - tittel
+                {t.admin.templates.signatureTitleField}
                 <input
                   {...form.register('signatureTitle')}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
@@ -339,25 +327,17 @@ export default function TemplatesPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-700">Logo</p>
-              <p className="text-xs text-slate-500">
-                PNG eller JPG fungerer best. Logoen vises øverst på diplomet.
-              </p>
+              <p className="text-sm font-semibold text-slate-700">{t.admin.templates.logoSection}</p>
+              <p className="text-xs text-slate-500">{t.admin.templates.logoHint}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoChange}
-                  className="hidden"
-                />
+                <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
                 <button
                   type="button"
                   onClick={() => logoInputRef.current?.click()}
                   disabled={uploadingLogo}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Last opp bildefil
+                  {t.admin.templates.uploadLogo}
                 </button>
                 <button
                   type="button"
@@ -365,19 +345,15 @@ export default function TemplatesPage() {
                   disabled={!logoUrl}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Fjern logo
+                  {t.admin.templates.removeLogo}
                 </button>
-                {uploadingLogo && (
-                  <span className="text-xs text-slate-500">Laster opp…</span>
-                )}
+                {uploadingLogo && <span className="text-xs text-slate-500">{t.admin.templates.uploading}</span>}
               </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-700">Signatur (PNG)</p>
-              <p className="text-xs text-slate-500">
-                Bruk en transparent PNG-signatur som vises på diplomet.
-              </p>
+              <p className="text-sm font-semibold text-slate-700">{t.admin.templates.signatureSection}</p>
+              <p className="text-xs text-slate-500">{t.admin.templates.signatureHint}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <input
                   ref={signatureInputRef}
@@ -388,7 +364,7 @@ export default function TemplatesPage() {
                     const file = event.target.files?.[0];
                     if (!file) return;
                     if (file.type !== 'image/png') {
-                      setErrorMessage('Signaturen må være en PNG-fil.');
+                      setErrorMessage(t.admin.templates.signatureMustBePng);
                       return;
                     }
                     setUploadingSignature(true);
@@ -399,10 +375,10 @@ export default function TemplatesPage() {
                       await uploadBytes(storageRef, file);
                       const url = await getDownloadURL(storageRef);
                       setSignatureUrl(url);
-                      setSuccessMessage('Signatur lastet opp.');
+                      setSuccessMessage(t.admin.templates.signatureUploadSuccess);
                     } catch (error) {
                       console.error('Failed to upload diploma signature', error);
-                      setErrorMessage('Kunne ikke laste opp signaturen.');
+                      setErrorMessage(t.admin.templates.signatureUploadError);
                     } finally {
                       setUploadingSignature(false);
                       event.target.value = '';
@@ -416,7 +392,7 @@ export default function TemplatesPage() {
                   disabled={uploadingSignature}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Last opp signatur
+                  {t.admin.templates.uploadSignature}
                 </button>
                 <button
                   type="button"
@@ -424,11 +400,9 @@ export default function TemplatesPage() {
                   disabled={!signatureUrl}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Fjern signatur
+                  {t.admin.templates.removeSignature}
                 </button>
-                {uploadingSignature && (
-                  <span className="text-xs text-slate-500">Laster opp…</span>
-                )}
+                {uploadingSignature && <span className="text-xs text-slate-500">{t.admin.templates.uploading}</span>}
               </div>
             </div>
 
@@ -448,21 +422,28 @@ export default function TemplatesPage() {
               disabled={saving}
               className="w-full rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {saving ? 'Lagrer…' : 'Lagre diplom-mal'}
+              {saving ? t.admin.templates.saving : t.admin.templates.saveTemplate}
             </button>
           </form>
 
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Forhåndsvisning</h2>
-              <p className="text-sm text-slate-500">
-                Dette er en forhåndsvisning av PDF-en.
-              </p>
+              <h2 className="text-lg font-semibold text-slate-900">{t.admin.templates.preview}</h2>
+              <p className="text-sm text-slate-500">{t.admin.templates.previewSubtitle}</p>
             </div>
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
               {logoUrl && (
                 <div className="mb-4 flex justify-center">
-                  <img src={logoUrl} alt="Logo" className="h-12 object-contain" />
+                  <Image
+                    src={logoUrl}
+                    alt="Logo"
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    unoptimized
+                    style={{ height: '3rem', width: 'auto' }}
+                    className="object-contain"
+                  />
                 </div>
               )}
               <p
@@ -471,30 +452,33 @@ export default function TemplatesPage() {
               >
                 {watchedValues.title || DEFAULT_TEMPLATE.title}
               </p>
-              <p className="mt-4 text-xl font-semibold text-slate-900">
-                {previewData.participantName}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-700">
-                {previewData.courseName}
-              </p>
+              <p className="mt-4 text-xl font-semibold text-slate-900">{previewData.participantName}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-700">{previewData.courseName}</p>
               <p className="mt-4 whitespace-pre-line text-sm text-slate-600">{previewBody}</p>
               <p className="mt-4 text-xs text-slate-500">
-                Kunde: {previewData.customerName} · Dato: {previewData.completedDate}
+                {t.admin.templates.previewCustomerLabel}: {previewData.customerName} · {t.admin.templates.previewDateLabel}: {previewData.completedDate}
               </p>
               <p className="mt-4 text-xs text-slate-400">{previewFooter}</p>
               <p className="mt-1 text-xs text-slate-400">
-                Utstedelsesdato: {previewData.completedDate}
+                {t.admin.templates.issuanceDate}: {previewData.completedDate}
               </p>
               {(signatureUrl || watchedValues.signatureName || watchedValues.signatureTitle) && (
                 <div className="mt-6 text-xs text-slate-500">
                   {signatureUrl && (
                     <div className="mb-2 flex justify-center">
-                      <img src={signatureUrl} alt="Signatur" className="h-10 object-contain" />
+                      <Image
+                        src={signatureUrl}
+                        alt="Signatur"
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        unoptimized
+                        style={{ height: '2.5rem', width: 'auto' }}
+                        className="object-contain"
+                      />
                     </div>
                   )}
-                  <p className="font-semibold text-slate-700">
-                    {watchedValues.signatureName}
-                  </p>
+                  <p className="font-semibold text-slate-700">{watchedValues.signatureName}</p>
                   <p>{watchedValues.signatureTitle}</p>
                 </div>
               )}
@@ -506,7 +490,7 @@ export default function TemplatesPage() {
                 disabled={previewDownloading}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {previewDownloading ? 'Laster ned forhåndsvisning…' : 'Last ned forhåndsvisning'}
+                {previewDownloading ? t.admin.templates.downloadingPreview : t.admin.templates.downloadPreview}
               </button>
               {previewError && <p className="text-sm text-red-600">{previewError}</p>}
             </div>

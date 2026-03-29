@@ -35,6 +35,8 @@ import {
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { db, storage } from '@/lib/firebase';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
@@ -184,6 +186,8 @@ export default function CourseModuleDetailPage() {
     moduleId?: string | string[];
   }>();
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const courseParam = params?.courseId;
   const moduleParam = params?.moduleId;
   const courseId = Array.isArray(courseParam) ? courseParam[0] : courseParam ?? null;
@@ -371,7 +375,7 @@ export default function CourseModuleDetailPage() {
       return;
     }
     const confirmed = window.confirm(
-      `Fjern spraket ${activeLanguage.toUpperCase()} fra emnet?`,
+      t.admin.moduleDetail.confirmRemoveLanguage(activeLanguage.toUpperCase()),
     );
     if (!confirmed) {
       return;
@@ -438,7 +442,7 @@ export default function CourseModuleDetailPage() {
     } catch (err) {
       console.error('Failed to update module', err);
       setFormError(
-        err instanceof Error ? err.message : 'Kunne ikke oppdatere emnet.',
+        err instanceof Error ? err.message : t.admin.moduleDetail.saveModuleError,
       );
     } finally {
       setSaving(false);
@@ -458,7 +462,7 @@ export default function CourseModuleDetailPage() {
   const handleDelete = async () => {
     if (!courseId || !moduleId || !draft) return;
     const confirmed = window.confirm(
-      `Slett emnet "${getLocaleValue(draft.title, activeLanguage)}"? Dette kan ikke angres.`,
+      t.admin.moduleDetail.confirmDeleteModule(getLocaleValue(draft.title, activeLanguage)),
     );
     if (!confirmed) return;
     try {
@@ -467,7 +471,7 @@ export default function CourseModuleDetailPage() {
     } catch (err) {
       console.error('Failed to delete module', err);
       setFormError(
-        err instanceof Error ? err.message : 'Kunne ikke slette emnet.',
+        err instanceof Error ? err.message : t.admin.moduleDetail.deleteModuleError,
       );
     }
   };
@@ -476,7 +480,7 @@ export default function CourseModuleDetailPage() {
     return (
       <section className="space-y-6">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-          Mangler informasjon om kurs eller emne.
+          {t.admin.moduleDetail.missingParams}
         </div>
       </section>
     );
@@ -486,7 +490,7 @@ export default function CourseModuleDetailPage() {
     return (
       <section className="space-y-6">
         <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
-          {error ?? 'Laster emnet …'}
+          {error ?? t.admin.moduleDetail.loading}
         </div>
       </section>
     );
@@ -500,10 +504,10 @@ export default function CourseModuleDetailPage() {
             href={`/courses/${courseId}`}
             className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
           >
-            ← Tilbake til kursadministrasjon
+            {t.admin.moduleDetail.backToCourseAdmin}
           </Link>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Emneadministrasjon
+            {t.admin.moduleDetail.moduleAdmin}
           </p>
         </div>
       </div>
@@ -536,14 +540,14 @@ export default function CourseModuleDetailPage() {
                 ref={languageInputRef}
                 value={languageInput}
                 onChange={(e) => setLanguageInput(e.target.value)}
-                placeholder="Språkkode"
+                placeholder={t.common.languageCode}
                 className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
               />
               <button
                 type="submit"
                 className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
               >
-                Legg til
+                {t.common.add}
               </button>
               <button
                 type="button"
@@ -552,7 +556,7 @@ export default function CourseModuleDetailPage() {
                   setLanguageInput('');
                 }}
                 className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                aria-label="Avbryt"
+                aria-label={t.common.cancel}
               >
                 ×
               </button>
@@ -566,7 +570,7 @@ export default function CourseModuleDetailPage() {
                   setLanguageInput('');
                 }}
                 className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label="Legg til språk"
+                aria-label={t.common.addLanguage}
               >
                 +
               </button>
@@ -575,8 +579,8 @@ export default function CourseModuleDetailPage() {
                 onClick={handleRemoveActiveLanguage}
                 disabled={languages.length <= 1}
                 className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                aria-label={`Fjern valgt språk ${activeLanguage.toUpperCase()}`}
-                title={`Fjern valgt språk (${activeLanguage.toUpperCase()})`}
+                aria-label={t.common.removeLanguageLabel(activeLanguage.toUpperCase())}
+                title={t.common.removeLanguageTitle(activeLanguage.toUpperCase())}
               >
                 -
               </button>
@@ -589,20 +593,20 @@ export default function CourseModuleDetailPage() {
         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Emneinformasjon
+              {t.admin.moduleDetail.moduleInfoLabel}
             </p>
             <h1 className="text-2xl font-semibold text-slate-900">
-              {fallbackTitle || 'Emne'}
+              {fallbackTitle || t.admin.moduleDetail.moduleTitle}
             </h1>
             <p className="text-sm text-slate-500">
-              Administrer innhold, media og kontrollspørsmål for emnet.
+              {t.admin.moduleDetail.moduleInfoSubtitle}
             </p>
           </div>
           <button
             onClick={handleDelete}
             className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Fjern emne
+            {t.admin.moduleDetail.removeModule}
           </button>
         </div>
 
@@ -611,7 +615,7 @@ export default function CourseModuleDetailPage() {
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <LocaleFieldEditor
-                  label="Tittel"
+                  label={t.common.title}
                   value={draft.title ?? {}}
                   onChange={(next) => updateField('title', next)}
                   activeLanguage={activeLanguage}
@@ -619,7 +623,7 @@ export default function CourseModuleDetailPage() {
                 />
 
                 <LocaleFieldEditor
-                  label="Beskrivelse"
+                  label={t.common.description}
                   value={draft.summary ?? {}}
                   onChange={(next) => updateField('summary', next)}
                   activeLanguage={activeLanguage}
@@ -630,7 +634,7 @@ export default function CourseModuleDetailPage() {
               </div>
 
               <LocaleRichEditor
-                label="Innhold"
+                label={t.admin.moduleDetail.contentField}
                 value={draft.body ?? {}}
                 onChange={(next) => updateField('body', next)}
                 activeLanguage={activeLanguage}
@@ -640,7 +644,7 @@ export default function CourseModuleDetailPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <LocaleMediaEditor
-              label="Media"
+              label={t.admin.moduleDetail.mediaField}
               media={draft.media ?? {}}
               onChange={(next) => updateField('media', next)}
               activeLanguage={activeLanguage}
@@ -653,13 +657,13 @@ export default function CourseModuleDetailPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-slate-700">Eksamen</p>
+                  <p className="text-sm font-semibold text-slate-700">{t.common.exam}</p>
                   <p className="text-xs text-slate-500">
-                    Angi hvor stor andel riktige svar som kreves for å bestå.
+                    {t.admin.moduleDetail.examSectionSubtitle}
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <span>Beståelseskrav</span>
+                  <span>{t.admin.moduleDetail.passRequirementLabel}</span>
                   <input
                     type="number"
                     min={0}
@@ -694,7 +698,7 @@ export default function CourseModuleDetailPage() {
             className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             type="button"
           >
-            Forhåndsvis
+            {t.common.preview}
           </button>
           <SaveChangesButton type="button" onClickAction={handleSave} loading={saving} />
         </div>
@@ -703,10 +707,10 @@ export default function CourseModuleDetailPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="border-b border-slate-100 pb-4">
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Kontrollspørsmål
+            {t.admin.moduleDetail.questionsLabel}
           </p>
           <p className="text-sm text-slate-500">
-            Spørsmål som stilles til kursdeltakeren etter at emnet er gjennomgått.
+            {t.admin.moduleDetail.questionsSubtitle}
           </p>
         </div>
 
@@ -811,6 +815,8 @@ const QuillEditor = ({
   modules: Record<string, unknown>;
   formats: string[];
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
   const lastHtmlRef = useRef<string>(value ?? '');
@@ -934,56 +940,56 @@ const QuillEditor = ({
         createPortal(
           <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
             <span className="mr-2 text-[11px] uppercase tracking-wide text-slate-500">
-              Tabell
+              {t.admin.moduleDetail.tableLabel}
             </span>
             <button
               type="button"
               onClick={() => handleTableAction('insertRowAbove')}
               className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
-              Ny rad over
+              {t.admin.moduleDetail.insertRowAbove}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertRowBelow')}
               className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
-              Ny rad under
+              {t.admin.moduleDetail.insertRowBelow}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnLeft')}
               className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
-              Ny kolonne venstre
+              {t.admin.moduleDetail.insertColumnLeft}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('insertColumnRight')}
               className="cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
             >
-              Ny kolonne høyre
+              {t.admin.moduleDetail.insertColumnRight}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteRow')}
               className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
-              Slett rad
+              {t.admin.moduleDetail.deleteRow}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteColumn')}
               className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
-              Slett kolonne
+              {t.admin.moduleDetail.deleteColumn}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteTable')}
               className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
-              Slett tabell
+              {t.admin.moduleDetail.deleteTable}
             </button>
           </div>,
           tableActionsHost,
@@ -1003,6 +1009,8 @@ const LocaleRichEditor = ({
   onChange: (next: LocaleStringMap) => void;
   activeLanguage: string;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const currentValue = value?.[activeLanguage] ?? '';
   const updateValue = (nextValue: string) => {
     const next: LocaleStringMap = { ...(value ?? {}) };
@@ -1067,8 +1075,182 @@ const LocaleRichEditor = ({
         formats={formats}
       />
       <p className="text-xs text-slate-400">
-        Velg tekst og bruk verktøylinjen for å formatere innholdet.
+        {t.admin.moduleDetail.richEditorHint}
       </p>
+    </div>
+  );
+};
+
+const MediaErrorFallback = ({ url, type }: { url: string; type: ModuleMediaItem['type'] }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  const config = {
+    image: { icon: '🖼️', label: t.admin.moduleDetail.imageUnavailableTitle, message: t.admin.moduleDetail.imageUnavailableMsg },
+    video: { icon: '🎥', label: t.admin.moduleDetail.videoUnavailableTitle, message: t.admin.moduleDetail.videoUnavailableMsg },
+    document: { icon: '📄', label: t.admin.moduleDetail.documentUnavailableTitle, message: t.admin.moduleDetail.documentUnavailableMsg },
+  };
+  const { icon, label, message } = config[type];
+  const filename = getFileNameFromUrl(url);
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
+      <span className="text-3xl" role="img" aria-label={label}>{icon}</span>
+      <p className="text-xs font-semibold text-slate-600">{message}</p>
+      <p className="text-[10px] font-mono text-slate-500 break-all">
+        <span className="font-semibold not-italic">{t.admin.moduleDetail.fileNamePrefix}</span>{filename}
+      </p>
+    </div>
+  );
+};
+
+const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  const typeLabel =
+    item.type === 'video' ? t.admin.moduleDetail.mediaTypeVideo : item.type === 'document' ? t.admin.moduleDetail.mediaTypeDocument : t.admin.moduleDetail.mediaTypeImage;
+  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl ring-2 ring-slate-300 cursor-grabbing opacity-95">
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+        <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400">
+          <DragHandleIcon />
+        </span>
+        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
+          {typeLabel}
+        </span>
+      </div>
+      <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+        {item.type === 'image' ? (
+          <Image fill src={item.url} alt="" className="object-contain" sizes="(max-width: 768px) 100vw, 33vw" />
+        ) : item.type === 'video' ? (
+          <div className="flex h-full w-full items-center justify-center text-4xl">🎥</div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-600">
+            <span className="text-4xl">📄</span>
+            <p className="text-xs font-semibold break-all">{documentName ?? t.admin.moduleDetail.mediaTypeDocument}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+MediaDragOverlay.displayName = 'MediaDragOverlay';
+
+const SortableMediaCard = ({
+  item,
+  onRemove,
+  isTarget,
+}: {
+  item: ModuleMediaItem;
+  onRemove: () => void;
+  isTarget: boolean;
+}) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({ id: item.id });
+  const [mediaError, setMediaError] = useState(false);
+  useEffect(() => {
+    setMediaError(false);
+  }, [item.url]);
+
+  const typeLabel =
+    item.type === 'video' ? t.admin.moduleDetail.mediaTypeVideo : item.type === 'document' ? t.admin.moduleDetail.mediaTypeDocument : t.admin.moduleDetail.mediaTypeImage;
+  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
+
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 h-full min-h-70"
+        style={{ visibility: 'hidden' }}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-3 rounded-2xl border bg-white p-4 shadow-sm transition-transform duration-200 ${
+        isTarget
+          ? 'border-indigo-400 ring-2 ring-indigo-300 bg-indigo-50 scale-[1.03]'
+          : 'border-slate-200 scale-100'
+      }`}
+    >
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+        <DragHandle attributes={attributes} listeners={listeners} />
+        <div className="flex items-center gap-2">
+          {isTarget && (
+            <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+              {t.admin.moduleDetail.swapMedia}
+            </span>
+          )}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
+            {typeLabel}
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
+          {mediaError ? (
+            <MediaErrorFallback url={item.url} type={item.type} />
+          ) : item.type === 'image' ? (
+            <Image
+              fill
+              src={item.url}
+              alt={t.admin.moduleDetail.previewMediaAlt}
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 33vw"
+              onError={() => setMediaError(true)}
+            />
+          ) : item.type === 'video' ? (
+            isYouTubeUrl(item.url) ? (
+              <iframe
+                src={item.url}
+                title={t.admin.moduleDetail.mediaTypeVideo}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="h-full w-full"
+              />
+            ) : (
+              <video
+                controls
+                className="h-full w-full object-cover"
+                onError={() => setMediaError(true)}
+              >
+                <source src={item.url} />
+                {t.admin.moduleDetail.videoNotSupported}
+              </video>
+            )
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4 text-center text-slate-600">
+              <span className="text-4xl" role="img" aria-label={t.admin.moduleDetail.mediaTypeDocument}>
+                📄
+              </span>
+              <p className="text-xs font-semibold wrap-break-word">{documentName ?? t.admin.moduleDetail.mediaTypeDocument}</p>
+            </div>
+          )}
+        </div>
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => window.open(item.url, '_blank')}
+              disabled={mediaError}
+              title={mediaError ? t.admin.moduleDetail.fileUnavailable : undefined}
+              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t.common.open}
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="cursor-pointer rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            >
+              {t.common.remove}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1088,6 +1270,8 @@ const LocaleMediaEditor = ({
   courseId: string;
   moduleId: string;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const items = useMemo(() => media?.[activeLanguage] ?? [], [media, activeLanguage]);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1207,7 +1391,7 @@ const LocaleMediaEditor = ({
       ]);
     } catch (err) {
       console.error('Failed to upload file', err);
-      alert('Kunne ikke laste opp filen. Prøv igjen.');
+      alert(t.admin.moduleDetail.uploadFileError);
     } finally {
       setUploading(null);
     }
@@ -1218,7 +1402,7 @@ const LocaleMediaEditor = ({
       <LocaleEditorHeader label={label} activeLanguage={activeLanguage} />
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-          Ingen media er lagt til for dette språket ennå.
+          {t.admin.moduleDetail.noMediaForLanguage}
         </div>
       ) : (
         <DndContext
@@ -1252,7 +1436,7 @@ const LocaleMediaEditor = ({
           className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'image'}
         >
-          {uploading === 'image' ? 'Laster opp …' : 'Last opp bilde'}
+          {uploading === 'image' ? t.common.uploading : t.admin.moduleDetail.uploadImage}
         </button>
         <button
           type="button"
@@ -1260,7 +1444,7 @@ const LocaleMediaEditor = ({
           className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'video'}
         >
-          {uploading === 'video' ? 'Laster opp …' : 'Last opp video'}
+          {uploading === 'video' ? t.common.uploading : t.admin.moduleDetail.uploadVideo}
         </button>
         <button
           type="button"
@@ -1268,7 +1452,7 @@ const LocaleMediaEditor = ({
           className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={uploading === 'document'}
         >
-          {uploading === 'document' ? 'Laster opp …' : 'Last opp PDF'}
+          {uploading === 'document' ? t.common.uploading : t.admin.moduleDetail.uploadDocument}
         </button>
       </div>
       <input
@@ -1312,187 +1496,6 @@ const getFileNameFromUrl = (url: string) => {
   }
 };
 
-const MEDIA_ERROR_CONFIG = {
-  image: {
-    icon: '🖼️',
-    label: 'Bildet er ikke tilgjengelig',
-    message: 'Vi finner ikke bildet. Fjern det og last det opp på nytt.'
-  },
-  video: {
-    icon: '🎥',
-    label: 'Videoen er ikke tilgjengelig',
-    message: 'Vi finner ikke videoen. Fjern den og last den opp på nytt.'
-  },
-  document: {
-    icon: '📄',
-    label: 'Dokumentet er ikke tilgjengelig',
-    message: 'Vi finner ikke dokumentet. Fjern det og last det opp på nytt.'
-  }
-} as const;
-
-const MediaErrorFallback = ({ url, type }: { url: string; type: ModuleMediaItem['type'] }) => {
-  const { icon, label, message } = MEDIA_ERROR_CONFIG[type];
-  const filename = getFileNameFromUrl(url);
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
-      <span className="text-3xl" role="img" aria-label={label}>{icon}</span>
-      <p className="text-xs font-semibold text-slate-600">{message}</p>
-      <p className="text-[10px] font-mono text-slate-500 break-all">
-        <span className="font-semibold not-italic">Filnavn: </span>{filename}
-      </p>
-    </div>
-  );
-};
-
-const MediaDragOverlay = memo(({ item }: { item: ModuleMediaItem }) => {
-  const typeLabel =
-    item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
-  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
-
-  return (
-    <div className="space-y-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xl ring-2 ring-slate-300 cursor-grabbing opacity-95">
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <span className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400">
-          <DragHandleIcon />
-        </span>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
-          {typeLabel}
-        </span>
-      </div>
-      <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
-        {item.type === 'image' ? (
-          <Image fill src={item.url} alt="" className="object-contain" sizes="(max-width: 768px) 100vw, 33vw" />
-        ) : item.type === 'video' ? (
-          <div className="flex h-full w-full items-center justify-center text-4xl">🎥</div>
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-600">
-            <span className="text-4xl">📄</span>
-            <p className="text-xs font-semibold break-all">{documentName ?? 'Dokument'}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-MediaDragOverlay.displayName = 'MediaDragOverlay';
-
-const SortableMediaCard = ({
-  item,
-  onRemove,
-  isTarget,
-}: {
-  item: ModuleMediaItem;
-  onRemove: () => void;
-  isTarget: boolean;
-}) => {
-  const { attributes, listeners, setNodeRef, isDragging } = useSortable({ id: item.id });
-  const [mediaError, setMediaError] = useState(false);
-  useEffect(() => {
-    setMediaError(false);
-  }, [item.url]);
-
-  const typeLabel =
-    item.type === 'video' ? 'Video' : item.type === 'document' ? 'Dokument' : 'Bilde';
-  const documentName = item.type === 'document' ? getFileNameFromUrl(item.url) : null;
-
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 h-full min-h-70"
-        style={{ visibility: 'hidden' }}
-      />
-    );
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`space-y-3 rounded-2xl border bg-white p-4 shadow-sm transition-transform duration-200 ${
-        isTarget
-          ? 'border-indigo-400 ring-2 ring-indigo-300 bg-indigo-50 scale-[1.03]'
-          : 'border-slate-200 scale-100'
-      }`}
-    >
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <DragHandle attributes={attributes} listeners={listeners} />
-        <div className="flex items-center gap-2">
-          {isTarget && (
-            <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-              ↔ Bytt
-            </span>
-          )}
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-600">
-            {typeLabel}
-          </span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 h-48">
-          {mediaError ? (
-            <MediaErrorFallback url={item.url} type={item.type} />
-          ) : item.type === 'image' ? (
-            <Image
-              fill
-              src={item.url}
-              alt="Forhåndsvis media"
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, 33vw"
-              onError={() => setMediaError(true)}
-            />
-          ) : item.type === 'video' ? (
-            isYouTubeUrl(item.url) ? (
-              <iframe
-                src={item.url}
-                title="Video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-              />
-            ) : (
-              <video
-                controls
-                className="h-full w-full object-cover"
-                onError={() => setMediaError(true)}
-              >
-                <source src={item.url} />
-                Nettleseren støtter ikke videoavspilling.
-              </video>
-            )
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4 text-center text-slate-600">
-              <span className="text-4xl" role="img" aria-label="Dokument">
-                📄
-              </span>
-              <p className="text-xs font-semibold wrap-break-word">{documentName ?? 'Dokument'}</p>
-            </div>
-          )}
-        </div>
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => window.open(item.url, '_blank')}
-              disabled={mediaError}
-              title={mediaError ? 'Filen er ikke tilgjengelig' : undefined}
-              className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Åpne
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              className="cursor-pointer rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-            >
-              Fjern
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const QuestionListEditor = ({
   questions,
   onChange,
@@ -1504,6 +1507,8 @@ const QuestionListEditor = ({
   languages: string[];
   activeLanguage: string;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const [minimizedIds, setMinimizedIds] = useState<Set<string>>(
     () => new Set(questions.map((question) => question.id)),
   );
@@ -1625,9 +1630,9 @@ const QuestionListEditor = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">
-          Kontrollspørsmål{' '}
+          {t.admin.moduleDetail.questionsLabel}{' '}
           <span className="font-normal text-slate-500">
-            ({questions.length} {questions.length === 1 ? 'spørsmål' : 'spørsmål'})
+            ({questions.length} {t.admin.moduleDetail.questionsLabel.toLowerCase()})
           </span>
         </p>
         <div className="flex items-center gap-2">
@@ -1637,7 +1642,7 @@ const QuestionListEditor = ({
               onClick={handleToggleAll}
               className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
             >
-              {allMinimized ? 'Vis alle spørsmål' : 'Skjul alle spørsmål'}
+              {allMinimized ? t.admin.moduleDetail.showAllQuestions : t.admin.moduleDetail.hideAllQuestions}
             </button>
           )}
           <button
@@ -1645,13 +1650,13 @@ const QuestionListEditor = ({
             onClick={addQuestion}
             className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
           >
-            Legg til spørsmål
+            {t.admin.moduleDetail.addQuestion}
           </button>
         </div>
       </div>
       {questions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-          Ingen kontrollspørsmål lagt til ennå.
+          {t.admin.moduleDetail.noQuestionsYet}
         </div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -1754,6 +1759,8 @@ const SortableQuestionAlternative = ({
   onUpdate: (altId: string, map: LocaleStringMap) => void;
   activeLanguage: string;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -1773,7 +1780,7 @@ const SortableQuestionAlternative = ({
         <div className="flex items-center gap-2">
           <DragHandle attributes={attributes} listeners={listeners} />
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Alternativ {idx + 1}
+            {t.admin.moduleDetail.alternativeLabel(idx + 1)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1783,7 +1790,7 @@ const SortableQuestionAlternative = ({
               checked={currentCorrectIds.includes(alternative.id)}
               onChange={() => onToggleCorrect(alternative.id)}
             />
-            Riktig svar
+            {t.admin.moduleDetail.correctAnswer}
           </label>
           {question.alternatives.length > 2 && (
             <button
@@ -1791,14 +1798,14 @@ const SortableQuestionAlternative = ({
               onClick={() => onRemove(alternative.id)}
               className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
             >
-              Fjern alternativ
+              {t.admin.moduleDetail.removeAlternative}
             </button>
           )}
         </div>
       </div>
 
       <LocaleFieldEditor
-        label="Alternativ tekst"
+        label={t.admin.moduleDetail.alternativeText}
         value={alternative.altText}
         onChange={(next) => onUpdate(alternative.id, next)}
         activeLanguage={activeLanguage}
@@ -1838,6 +1845,8 @@ const QuestionEditor = ({
   isMinimized: boolean;
   onToggleMinimized: () => void;
 }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const alternativeSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -1938,10 +1947,10 @@ const QuestionEditor = ({
           )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Spørsmål #{index + 1}
+              {t.admin.moduleDetail.questionIndex(index + 1)}
             </p>
             <p className="text-xs text-slate-500">
-              {question.alternatives.length} alternativer
+              {t.admin.moduleDetail.alternativeCount(question.alternatives.length)}
             </p>
           </div>
         </div>
@@ -1950,7 +1959,7 @@ const QuestionEditor = ({
             type="button"
             onClick={onToggleMinimized}
             className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-            title={isMinimized ? 'Vis detaljer' : 'Skjul detaljer'}
+            title={isMinimized ? t.admin.moduleDetail.showDetails : t.admin.moduleDetail.hideDetails}
           >
             {isMinimized ? (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -1965,13 +1974,13 @@ const QuestionEditor = ({
           <DuplicateButton
             onClick={onDuplicate}
             className="ml-2"
-          />
+          >{t.common.duplicate}</DuplicateButton>
           <button
             type="button"
             onClick={onRemove}
             className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
           >
-            Fjern spørsmål
+            {t.admin.moduleDetail.removeQuestion}
           </button>
         </div>
       </div>
@@ -1980,7 +1989,7 @@ const QuestionEditor = ({
       {!isMinimized && (
         <div className="border-t border-slate-100 px-4 pb-4 pt-4 space-y-4">
           <LocaleFieldEditor
-            label="Spørsmålstekst"
+            label={t.admin.moduleDetail.questionText}
             value={question.contentText}
             onChange={(next) => updateLocaleField('contentText', next)}
             activeLanguage={activeLanguage}
@@ -1989,13 +1998,13 @@ const QuestionEditor = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-700">Svaralternativer</p>
+              <p className="text-sm font-semibold text-slate-700">{t.admin.moduleDetail.answersLabel}</p>
               <button
                 type="button"
                 onClick={addAlternative}
                 className="cursor-pointer rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
               >
-                Legg til alternativ
+                {t.admin.moduleDetail.addAlternative}
               </button>
             </div>
 

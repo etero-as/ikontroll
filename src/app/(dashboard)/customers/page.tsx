@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 import CustomerManager from './CustomerManager';
 
@@ -13,6 +15,8 @@ export default function CustomersPage() {
   const pathname = usePathname();
   const hasRedirectedRef = useRef(false);
   const redirectPath = activeCustomerId ? `/customers/${activeCustomerId}` : null;
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   useEffect(() => {
     const shouldRedirect =
@@ -36,7 +40,7 @@ export default function CustomersPage() {
   if (!isSystemOwner) {
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Denne siden er kun tilgjengelig for systemeiere.
+        {t.admin.customers.ownerOnly}
       </section>
     );
   }
@@ -45,16 +49,13 @@ export default function CustomersPage() {
     <section className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Administrasjon
+          {t.admin.customers.pageSectionLabel}
         </p>
-        <h1 className="text-3xl font-semibold text-slate-900">Kunder</h1>
-        <p className="text-sm text-slate-500">
-          Opprett, rediger og administrer kunder knyttet til valgt selskap.
-        </p>
+        <h1 className="text-3xl font-semibold text-slate-900">{t.admin.customers.pageTitle}</h1>
+        <p className="text-sm text-slate-500">{t.admin.customers.pageSubtitle}</p>
       </div>
 
       <CustomerManager />
     </section>
   );
 }
-

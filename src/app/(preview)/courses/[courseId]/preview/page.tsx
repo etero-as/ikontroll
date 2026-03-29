@@ -2,6 +2,7 @@
 
 import { use, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
@@ -257,10 +258,12 @@ export default function CoursePreviewPage({
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {course.courseImageUrl ? (
           <div className="relative h-64 w-full overflow-hidden sm:h-80 md:h-96">
-            <img
+            <Image
               src={course.courseImageUrl}
               alt={getLocalizedValue(course.title, locale) || courseId}
-              className="h-full w-full object-cover"
+              fill
+              unoptimized
+              className="object-cover"
             />
           </div>
         ) : (

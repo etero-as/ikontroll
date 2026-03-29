@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModule } from '@/hooks/useCourseModule';
@@ -30,7 +31,7 @@ const PreviewMediaImage = ({ src, alt, className }: { src: string; alt: string; 
       </div>
     );
   }
-  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+  return <Image src={src} alt={alt} fill unoptimized className={className} onError={() => setError(true)} />;
 };
 
 const getAlternativeLabel = (
@@ -185,7 +186,7 @@ export default function ModulePreviewPage({
   const moduleTitle = getLocalizedValue(module?.title, locale) || 'Emne';
   const summary = getLocalizedValue(module?.summary, locale);
   const bodyHtml = getLocalizedValue(module?.body, locale);
-  const questions = module?.questions ?? [];
+  const questions = useMemo(() => module?.questions ?? [], [module?.questions]);
   const isModuleCompleted = completedModules.includes(moduleId);
   const quizLabels = getQuizButtonLabels(locale);
 
@@ -329,7 +330,7 @@ export default function ModulePreviewPage({
                 return (
                   <div
                     key={item.id}
-                    className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
+                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
                   >
                     <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
                   </div>

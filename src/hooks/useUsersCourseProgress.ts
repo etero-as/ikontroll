@@ -9,7 +9,7 @@ export type UsersCourseProgressMap = Record<string, Record<string, string[]>>;
 
 export const useUsersCourseProgress = (userIds: string[]): UsersCourseProgressMap => {
   const [progressMap, setProgressMap] = useState<UsersCourseProgressMap>({});
-  const sortedIds = useMemo(() => [...userIds].sort(), [userIds.join('|')]);
+  const sortedIds = useMemo(() => [...userIds].sort(), [userIds]);
 
   useEffect(() => {
     if (!sortedIds.length) {
@@ -44,8 +44,12 @@ export const useUsersCourseProgress = (userIds: string[]): UsersCourseProgressMa
     return () => {
       unsubscribes.forEach((unsub) => unsub());
     };
-  }, [sortedIds.join('|')]);
+  }, [sortedIds]);
 
   return useMemo(() => progressMap, [progressMap]);
 };
+
+
+
+
 

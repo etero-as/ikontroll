@@ -10,6 +10,8 @@ import PortalModePrompt from '@/components/PortalModePrompt';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export default function DashboardLayout({
   children,
@@ -30,6 +32,8 @@ export default function DashboardLayout({
     logout,
   } = useAuth();
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   useEffect(() => {
     if (!loading && !firebaseUser) {
@@ -53,7 +57,7 @@ export default function DashboardLayout({
       <div className="flex h-screen flex-col bg-slate-50">
         <Topbar />
         <main className="flex flex-1 items-center justify-center bg-slate-50">
-          <p className="text-sm font-semibold text-slate-500">Klargjør IKontroll …</p>
+          <p className="text-sm font-semibold text-slate-500">{t.admin.layout.preparing}</p>
         </main>
       </div>
     );
@@ -67,18 +71,17 @@ export default function DashboardLayout({
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="space-y-2">
             <p className="text-xl font-semibold text-slate-900">
-              Ingen administratortilganger
+              {t.admin.layout.noAdminAccess}
             </p>
             <p className="max-w-md text-sm text-slate-500">
-              Vi finner ingen kunder eller selskaper der denne brukeren er administrator. Ta
-              kontakt med systemeier for å få tilgang.
+              {t.admin.layout.noAdminAccessDescription}
             </p>
           </div>
           <button
             onClick={() => logout()}
             className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Tilbake til logginn
+            {t.admin.layout.backToLogin}
           </button>
         </div>
       </div>

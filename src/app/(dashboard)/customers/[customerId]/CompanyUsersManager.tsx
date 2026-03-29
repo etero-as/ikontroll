@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 import { useCompanyUsers } from '@/hooks/useCompanyUsers';
 import type { CompanyUser, CompanyUserPayload } from '@/types/companyUser';
 
@@ -69,6 +71,10 @@ export default function CompanyUsersManager({
   customerId,
   customerName,
 }: Props) {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
+  const tu = t.admin.customerDetail.users;
+
   const { users, loading, error, createUser, updateUser, deleteUser } =
     useCompanyUsers(ownerCompanyId, customerId);
 
@@ -126,12 +132,12 @@ export default function CompanyUsersManager({
 
       if (editingUser) {
         if (trimmedFirstName.length < 2) {
-          setFormError('Fornavn må være minst 2 tegn ved redigering.');
+          setFormError(tu.firstNameMinLength);
           setBusy(false);
           return;
         }
         if (trimmedLastName.length < 2) {
-          setFormError('Etternavn må være minst 2 tegn ved redigering.');
+          setFormError(tu.lastNameMinLength);
           setBusy(false);
           return;
         }
@@ -162,8 +168,8 @@ export default function CompanyUsersManager({
       console.error('Failed to save user', err);
       setFormError(
         err instanceof Error
-          ? `Kunne ikke lagre brukeren: ${err.message}`
-          : 'Kunne ikke lagre brukeren.',
+          ? tu.saveError(err.message)
+          : tu.saveErrorGeneric,
       );
     } finally {
       setBusy(false);
@@ -173,7 +179,7 @@ export default function CompanyUsersManager({
   const handleDelete = useCallback(
     async (user: CompanyUser) => {
       const confirmed = window.confirm(
-        `Fjern ${user.firstName} ${user.lastName} fra denne kunden?`,
+        tu.confirmRemove(user.firstName ?? '', user.lastName ?? ''),
       );
       if (!confirmed) return;
 
@@ -181,10 +187,10 @@ export default function CompanyUsersManager({
         await deleteUser(user.id, user.authUid);
       } catch (err) {
         console.error('Failed to delete user', err);
-        alert('Kunne ikke slette brukeren.');
+        alert(tu.deleteError);
       }
     },
-    [deleteUser],
+    [deleteUser, tu],
   );
 
   const userRows = useMemo(() => {
@@ -195,7 +201,7 @@ export default function CompanyUsersManager({
             colSpan={4}
             className="py-8 text-center text-sm text-slate-500"
           >
-            Ingen brukere registrert ennå.
+            {tu.noUsers}
           </td>
         </tr>
       );
@@ -207,8 +213,8 @@ export default function CompanyUsersManager({
       );
       const membershipRoles = membership?.roles ?? [];
       const roleLabels = membershipRoles.length
-        ? membershipRoles.map((role) => (role === 'admin' ? 'Admin' : 'Bruker')).join(', ')
-        : 'Ingen';
+        ? membershipRoles.map((role) => (role === 'admin' ? tu.roleAdmin : tu.roleUser)).join(', ')
+        : tu.noRoles;
       const displayName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
       const primaryLabel = displayName || user.email;
 
@@ -234,7 +240,7 @@ export default function CompanyUsersManager({
                 : 'bg-amber-100 text-amber-700'
             }`}
           >
-            {user.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+            {user.status === 'active' ? tu.statusActive : tu.statusInactive}
           </span>
         </td>
         <td className="py-3 text-right">
@@ -243,35 +249,33 @@ export default function CompanyUsersManager({
               onClick={() => openEdit(user)}
               className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Rediger
+              {tu.editButton}
             </button>
             <button
               onClick={() => handleDelete(user)}
               className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
             >
-              Fjern bruker
+              {tu.removeButton}
             </button>
           </div>
         </td>
       </tr>
       );
     });
-  }, [users, customerId, openEdit, handleDelete]);
+  }, [users, customerId, openEdit, handleDelete, tu]);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Brukere</h3>
-          <p className="text-sm text-slate-500">
-            Administrer tilgang for ansatte hos kunden.
-          </p>
+          <h3 className="text-lg font-semibold text-slate-900">{tu.title}</h3>
+          <p className="text-sm text-slate-500">{tu.subtitle}</p>
         </div>
         <button
           onClick={openCreate}
           className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          + Ny bruker
+          {tu.newUser}
         </button>
       </div>
 
@@ -283,18 +287,18 @@ export default function CompanyUsersManager({
 
       {loading ? (
         <div className="py-10 text-center text-sm text-slate-500">
-          Laster brukere …
+          {tu.loading}
         </div>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="pb-2">Navn</th>
-                <th className="pb-2">Telefon</th>
-                <th className="pb-2">Roller</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2 text-right">Handlinger</th>
+                <th className="pb-2">{tu.colName}</th>
+                <th className="pb-2">{tu.colPhone}</th>
+                <th className="pb-2">{tu.colRoles}</th>
+                <th className="pb-2">{tu.colStatus}</th>
+                <th className="pb-2 text-right">{tu.colActions}</th>
               </tr>
             </thead>
             <tbody>{userRows}</tbody>
@@ -308,18 +312,18 @@ export default function CompanyUsersManager({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  {editingUser ? 'Rediger bruker' : 'Ny bruker'}
+                  {editingUser ? tu.modalEditTitle : tu.modalCreateTitle}
                 </p>
                 <h4 className="text-2xl font-semibold text-slate-900">
                   {editingUser
                     ? `${editingUser.firstName} ${editingUser.lastName}`
-                    : 'Brukerinformasjon'}
+                    : tu.modalCreateHeading}
                 </h4>
               </div>
               <button
                 onClick={closeForm}
                 className="text-slate-400 transition hover:text-slate-700"
-                aria-label="Lukk"
+                aria-label={t.common.close}
               >
                 ×
               </button>
@@ -334,12 +338,10 @@ export default function CompanyUsersManager({
             <form
               onSubmit={form.handleSubmit(
                 (values) => {
-                  console.log('handleSubmit success', values);
                   void onSubmit(values);
                 },
-                (errors) => {
-                  console.error('handleSubmit validation errors', errors);
-                  setFormError('Skjemaet inneholder feil. Sjekk feltene og prøv igjen.');
+                () => {
+                  setFormError(tu.formError);
                 },
               )}
               className="mt-6 space-y-4"
@@ -347,7 +349,7 @@ export default function CompanyUsersManager({
               {editingUser && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field
-                    label="Fornavn"
+                    label={tu.fieldFirstName}
                     error={form.formState.errors.firstName?.message}
                   >
                     <input
@@ -356,7 +358,7 @@ export default function CompanyUsersManager({
                     />
                   </Field>
                   <Field
-                    label="Etternavn"
+                    label={tu.fieldLastName}
                     error={form.formState.errors.lastName?.message}
                   >
                     <input
@@ -366,7 +368,7 @@ export default function CompanyUsersManager({
                   </Field>
                 </div>
               )}
-              <Field label="E-post" error={form.formState.errors.email?.message}>
+              <Field label={tu.fieldEmail} error={form.formState.errors.email?.message}>
                 <input
                   type="email"
                   {...form.register('email')}
@@ -377,7 +379,7 @@ export default function CompanyUsersManager({
                   }`}
                 />
               </Field>
-              <Field label="Telefon" error={form.formState.errors.phone?.message}>
+              <Field label={tu.fieldPhone} error={form.formState.errors.phone?.message}>
                 <input
                   {...form.register('phone')}
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
@@ -385,7 +387,7 @@ export default function CompanyUsersManager({
               </Field>
               {editingUser && (
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Roller" error={form.formState.errors.roles?.message}>
+                  <Field label={tu.fieldRoles} error={form.formState.errors.roles?.message}>
                     <div className="flex flex-wrap gap-4">
                       {(['admin', 'user'] as const).map((role) => (
                         <label key={role} className="flex items-center gap-2 text-sm text-slate-700">
@@ -395,21 +397,21 @@ export default function CompanyUsersManager({
                             {...form.register('roles')}
                             className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
                           />
-                          {role === 'admin' ? 'Admin' : 'Bruker'}
+                          {role === 'admin' ? tu.roleAdminLabel : tu.roleUserLabel}
                         </label>
                       ))}
                     </div>
                   </Field>
                   <Field
-                    label="Status"
+                    label={tu.fieldStatus}
                     error={form.formState.errors.status?.message}
                   >
                     <select
                       {...form.register('status')}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     >
-                      <option value="active">Aktiv</option>
-                      <option value="inactive">Inaktiv</option>
+                      <option value="active">{tu.statusActiveOption}</option>
+                      <option value="inactive">{tu.statusInactiveOption}</option>
                     </select>
                   </Field>
                 </div>
@@ -422,25 +424,18 @@ export default function CompanyUsersManager({
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   disabled={busy}
                 >
-                  Avbryt
+                  {tu.cancelButton}
                 </button>
                 <button
                   type="submit"
-                  onClick={() => {
-                    console.log('Submit button clicked', {
-                      editing: Boolean(editingUser),
-                      busy,
-                      values: form.getValues(),
-                    });
-                  }}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
                   disabled={busy}
                 >
                   {busy
-                    ? 'Lagrer …'
+                    ? tu.savingButton
                     : editingUser
-                      ? 'Oppdater bruker'
-                      : 'Opprett bruker'}
+                      ? tu.updateButton
+                      : tu.createButton}
                 </button>
               </div>
             </form>

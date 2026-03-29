@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
@@ -53,7 +54,7 @@ const MediaImage = ({
       </div>
     );
   }
-  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />;
+  return <Image src={src} alt={alt} fill unoptimized className={className} onError={() => setError(true)} />;
 };
 
 const getAlternativeLabel = (
@@ -202,7 +203,7 @@ export default function ConsumerModuleView({
       return bodyHtml;
     }
   }, [bodyHtml]);
-  const questions = module.questions ?? [];
+  const questions = useMemo(() => module.questions ?? [], [module.questions]);
   const isModuleCompleted = completedModules.includes(module.id);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -813,10 +814,15 @@ export default function ConsumerModuleView({
                           <p className="text-sm font-semibold">Bildet er ikke å finne</p>
                         </div>
                       ) : (
-                        <img
+                        <Image
                           src={mediaPreview.url}
                           alt="Modulbilde"
-                          className="block w-auto h-auto max-w-full max-h-[85vh] object-contain"
+                          width={0}
+                          height={0}
+                          sizes="100vw"
+                          unoptimized
+                          className="block object-contain"
+                          style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '85vh' }}
                           onError={() => setPreviewImgError(true)}
                         />
                       )}
