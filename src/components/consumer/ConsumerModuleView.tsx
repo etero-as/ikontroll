@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Dialog, Transition } from '@headlessui/react';
+import { ChevronDown } from 'lucide-react';
 
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import { useCourseModules } from '@/hooks/useCourseModules';
@@ -28,7 +28,7 @@ import { getTranslation } from '@/utils/translations';
 interface ConsumerModuleViewProps {
   course: Course;
   module: CourseModule;
-  basePath?: string; // e.g. '/my-courses'
+  basePath?: string;
 }
 
 const DEFAULT_EXAM_PASS_PERCENTAGE = 80;
@@ -57,10 +57,13 @@ const MediaImage = ({
   return <Image src={src} alt={alt} fill unoptimized className={className} onError={() => setError(true)} />;
 };
 
+const getAlternativeLocaleFallback = (locale: string) =>
+  locale === 'en' ? 'Option' : locale === 'it' ? 'Alternativa' : locale === 'sv' ? 'Alternativ' : 'Alternativ';
+
 const getAlternativeLabel = (
   alternative: CourseQuestionAlternative,
   locale: string,
-) => getLocalizedValue(alternative.altText, locale) || 'Alternativ';
+) => getLocalizedValue(alternative.altText, locale) || getAlternativeLocaleFallback(locale);
 
 const getFileNameFromUrl = (url: string) => {
   try {
@@ -123,8 +126,8 @@ export default function ConsumerModuleView({
   const searchParams = useSearchParams();
   const requestedLang = searchParams.get('lang');
   const { firebaseUser } = useAuth();
-  const { locale: preferredLocale } = useLocale();
-  const { completedModules, setModuleCompletion } = useCourseProgress(course.id);
+  const { locale: preferredLocale, setLocale } = useLocale();
+  const { completedModules, setModuleCompletion, moduleAnsweredCounts, moduleAnswers, saveModuleAnswers, loading: progressLoading } = useCourseProgress(course.id);
   const { modules } = useCourseModules(course.id);
 
   const availableLocales = useMemo(() => {
@@ -146,9 +149,13 @@ export default function ConsumerModuleView({
   }, [module, course]);
 
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales, requestedLang ?? preferredLocale),
-    [availableLocales, requestedLang, preferredLocale],
+    () => getPreferredLocale(availableLocales, preferredLocale),
+    [availableLocales, preferredLocale],
   );
+
+  useEffect(() => {
+    if (requestedLang) setLocale(requestedLang);
+  }, [requestedLang, setLocale]);
 
   const t = getTranslation(locale);
   const moduleTranslations = t.modules as typeof t.modules & {
@@ -206,8 +213,67 @@ export default function ConsumerModuleView({
   const questions = useMemo(() => module.questions ?? [], [module.questions]);
   const isModuleCompleted = completedModules.includes(module.id);
 
+  const currentModuleIndex = useMemo(
+    () => (modules ? modules.findIndex((m) => m.id === module.id) : -1),
+    [modules, module.id],
+  );
+  const prevModuleItem =
+    modules && currentModuleIndex > 0 ? modules[currentModuleIndex - 1] : null;
+  const nextModuleNavItem =
+    modules && currentModuleIndex >= 0 && currentModuleIndex < modules.length - 1
+      ? modules[currentModuleIndex + 1]
+      : null;
+  const completedCount = modules
+    ? modules.filter((m) => completedModules.includes(m.id)).length
+    : 0;
+  const progressPercent =
+    modules?.length
+      ? Math.round((completedCount / modules.length) * 100)
+      : 0;
+
+  const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
+  const moduleDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moduleDropdownOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        moduleDropdownRef.current &&
+        !moduleDropdownRef.current.contains(e.target as Node)
+      ) {
+        setModuleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [moduleDropdownOpen]);
+
+  const handleNavToModule = (targetModuleId: string) => {
+    router.push(
+      `${basePath}/${course.id}/modules/${targetModuleId}?lang=${locale}`,
+    );
+  };
+
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [answersInitialized, setAnswersInitialized] = useState(false);
+
+  useEffect(() => {
+    if (answersInitialized || progressLoading) return;
+    const saved = moduleAnswers[module.id] ?? {};
+    if (Object.keys(saved).length > 0) {
+      setAnswers(saved);
+      const firstUnanswered = questions.findIndex((q) => !saved[q.id]);
+      setCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered);
+    }
+    setAnswersInitialized(true);
+  }, [answersInitialized, progressLoading, moduleAnswers, module.id, questions]);
+
+  useEffect(() => {
+    if (!answersInitialized) return;
+    saveModuleAnswers(module.id, answers);
+  }, [answers, answersInitialized, module.id, saveModuleAnswers]);
   const [showSummary, setShowSummary] = useState(false);
   const [showCourseComplete, setShowCourseComplete] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -437,7 +503,8 @@ export default function ConsumerModuleView({
 
   if (showCourseComplete) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
+      <div className="mx-auto max-w-5xl px-4 py-12 md:px-8">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
         <div className="rounded-full bg-emerald-100 p-6">
           <div className="text-6xl">🏆</div>
         </div>
@@ -470,18 +537,107 @@ export default function ConsumerModuleView({
           {downloadError && <p className="text-sm text-red-600">{downloadError}</p>}
         </div>
       </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-12">
-      <header className="space-y-6">
-        <Link
-          href={courseOverviewHref}
-          className="text-sm font-semibold text-slate-500 transition hover:text-slate-900"
-        >
-          ← {t.modules.backToOverview}
-        </Link>
+    <>
+      <div className="sticky top-16 z-30 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 md:px-8">
+          <button
+            onClick={() => router.replace(courseOverviewHref)}
+            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+          >
+            ← {t.modules.backToOverview}
+          </button>
+          <span className="hidden h-4 w-px bg-slate-200 md:block" />
+          <button
+            disabled={!prevModuleItem}
+            onClick={() => prevModuleItem && handleNavToModule(prevModuleItem.id)}
+            className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ‹ {t.modules.navPrevious}
+          </button>
+          <button
+            disabled={!nextModuleNavItem}
+            onClick={() => nextModuleNavItem && handleNavToModule(nextModuleNavItem.id)}
+            className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {t.modules.navNext} ›
+          </button>
+          <div className="relative" ref={moduleDropdownRef}>
+            <button
+              onClick={() => setModuleDropdownOpen((p) => !p)}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              {t.modules.allModules}
+              <ChevronDown size={14} />
+            </button>
+            {moduleDropdownOpen && (
+              <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                {(modules ?? []).map((m, i) => {
+                  const isCompleted = completedModules.includes(m.id);
+                  const total = m.questions?.length ?? 0;
+                  const liveCount = m.id === module.id ? Object.keys(answers).length : 0;
+                  const persistedCount = moduleAnsweredCounts[m.id] ?? 0;
+                  const answeredCount = Math.max(liveCount, persistedCount);
+                  const pct = isCompleted
+                    ? 100
+                    : total > 0
+                    ? Math.min(Math.round((answeredCount / total) * 100), 100)
+                    : 0;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        handleNavToModule(m.id);
+                        setModuleDropdownOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-slate-50 ${
+                        m.id === module.id
+                          ? 'font-semibold text-slate-900'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      <span className="flex-1 truncate">
+                        {i + 1}.{' '}
+                        {getLocalizedValue(m.title, locale) || t.common.untitled}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <div className="h-1 w-8 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className={`w-7 text-right text-xs font-medium ${pct === 100 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">
+              {completedCount}/{modules?.length ?? 0}
+            </span>
+            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-slate-900 transition-all"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-4 pt-6 md:px-8">
+        <div className="flex flex-col gap-8 pb-12">
         <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -566,17 +722,16 @@ export default function ConsumerModuleView({
 
           {summary && <p className="text-base text-slate-600">{summary}</p>}
         </div>
-      </header>
 
-      {bodyHtml && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-          <h2 className="text-xl font-semibold text-slate-900">{t.modules.content}</h2>
-          <div
-            className="prose prose-slate mt-4 max-w-none"
-            dangerouslySetInnerHTML={{ __html: bodyHtmlWithExternalLinks }}
-          />
-        </section>
-      )}
+        {bodyHtml && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+            <h2 className="text-xl font-semibold text-slate-900">{t.modules.content}</h2>
+            <div
+              className="prose prose-slate mt-4 max-w-none"
+              dangerouslySetInnerHTML={{ __html: bodyHtmlWithExternalLinks }}
+            />
+          </section>
+        )}
 
       {questions.length > 0 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
@@ -834,6 +989,8 @@ export default function ConsumerModuleView({
           </div>
         </Dialog>
       </Transition>
-    </div>
+      </div>
+      </div>
+    </>
   );
 }

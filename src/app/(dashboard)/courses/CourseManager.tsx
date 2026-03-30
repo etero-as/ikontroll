@@ -259,7 +259,7 @@ export default function CourseManager() {
                   <th className="pb-2 pl-2 pr-4">{t.admin.courses.titleCol}</th>
                   <th className="pb-2 px-4 whitespace-nowrap">{t.admin.courses.statusCol}</th>
                   <th className="pb-2 px-4 whitespace-nowrap">{t.admin.courses.lastUpdated}</th>
-                  <th className="pb-2 pl-4 pr-2 text-center">{t.admin.courses.actions}</th>
+                  <th className="pb-2 pl-4 pr-2 text-center"></th>
                 </tr>
               </thead>
               <tbody>
@@ -292,10 +292,12 @@ export default function CourseManager() {
                     <td className="py-3 pl-4 pr-2 border-b border-slate-100 text-center rounded-r transition-colors group-has-[[data-title]:hover]:bg-slate-100">
                       <div className="flex justify-center gap-2">
                         <Link
-                          href={`/courses/${course.id}`}
+                          href={`/courses/${course.id}/preview?lang=${locale}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center cursor-pointer rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                         >
-                          {t.admin.courses.manage}
+                          {t.common.preview}
                         </Link>
                         <DuplicateButton
                           onClick={() => { setDuplicateError(null); setDuplicateTarget(course); }}

@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -53,12 +53,16 @@ export default function ConsumerCourseView({
     return Array.from(set);
   }, [course, modules]);
 
-  const { locale: preferredLocale } = useLocale();
+  const { locale: preferredLocale, setLocale } = useLocale();
 
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales, requestedLang ?? preferredLocale),
-    [availableLocales, requestedLang, preferredLocale],
+    () => getPreferredLocale(availableLocales, preferredLocale),
+    [availableLocales, preferredLocale],
   );
+
+  useEffect(() => {
+    if (requestedLang) setLocale(requestedLang);
+  }, [requestedLang, setLocale]);
 
   const t = getTranslation(locale);
   const { firebaseUser } = useAuth();
@@ -67,7 +71,7 @@ export default function ConsumerCourseView({
 
   const description = getLocalizedValue(course?.description, locale);
   const updatedAt = course?.updatedAt ?? course?.createdAt;
-  const { completedModules, loading: progressLoading } = useCourseProgress(course.id);
+  const { completedModules, loading: progressLoading, moduleAnsweredCounts } = useCourseProgress(course.id);
   const totalModules = modules.length;
   const completedCount = modules.filter((module) =>
     completedModules.includes(module.id),
@@ -236,7 +240,13 @@ export default function ConsumerCourseView({
         <div className="mt-6 space-y-4">
           {modules.map((module, index) => {
             const isCompleted = completedModules.includes(module.id);
-            const moduleProgressPercent = isCompleted ? 100 : 0;
+            const total = module.questions?.length ?? 0;
+            const answered = moduleAnsweredCounts[module.id] ?? 0;
+            const moduleProgressPercent = isCompleted
+              ? 100
+              : total > 0
+              ? Math.min(Math.round((answered / total) * 100), 100)
+              : 0;
             const localizedMedia = getLocalizedMediaItems(module.media, locale);
             const videoCount = localizedMedia.length
               ? localizedMedia.filter((item) => item.type === 'video').length
@@ -264,9 +274,15 @@ export default function ConsumerCourseView({
                     {t.modules.containsVideos(videoCount)}
                   </p>
                 )}
-                <div className="mt-4">
+                  <div className="mt-4">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                    <span>{isCompleted ? t.courses.completed : t.courses.notStarted}</span>
+                    <span>
+                      {isCompleted
+                        ? t.courses.completed
+                        : moduleProgressPercent > 0
+                        ? t.courses.inProgress
+                        : t.courses.notStarted}
+                    </span>
                     <span>{moduleProgressPercent}%</span>
                   </div>
                   <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">

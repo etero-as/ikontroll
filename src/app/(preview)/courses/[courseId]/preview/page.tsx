@@ -1,7 +1,7 @@
 'use client';
 
-import { use, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { use, useCallback, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 import { useCourse } from '@/hooks/useCourse';
@@ -9,14 +9,19 @@ import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourseProgress } from '@/hooks/useCourseProgress';
 import type { LocaleStringArrayMap, LocaleStringMap } from '@/types/course';
 import { getLocalizedMediaItems } from '@/utils/media';
+import { useLocale } from '@/context/LocaleContext';
 
-const getPreferredLocale = (available: string[]): string => {
-  if (!available.length) return 'no';
+const getPreferredLocale = (available: string[], requested: string | null = null): string => {
+  if (!available.length) return requested ?? 'no';
+  const normalizedRequested = requested?.slice(0, 2).toLowerCase() ?? null;
+  if (normalizedRequested && available.includes(normalizedRequested)) {
+    return normalizedRequested;
+  }
   const browserLang =
     typeof window !== 'undefined'
       ? window.navigator.language.slice(0, 2).toLowerCase()
       : 'no';
-  const candidates = [browserLang, 'no', 'en'];
+  const candidates = [normalizedRequested, browserLang, 'no', 'en'].filter(Boolean) as string[];
   for (const candidate of candidates) {
     if (available.includes(candidate)) {
       return candidate;
@@ -161,6 +166,55 @@ const getDateLocale = (locale: string): string => {
   }
 };
 
+const getCoursePageLabels = (locale: string) => {
+  switch (locale) {
+    case 'en':
+      return {
+        startCourse: 'Start course',
+        continueCourse: 'Continue course',
+        moduleLabel: (index: number) => `Module ${index + 1}`,
+        videoCount: (count: number) => `Contains ${count} video${count > 1 ? 's' : ''}`,
+        untitled: 'Untitled',
+        noImage: 'No cover image uploaded',
+        loading: 'Loading course …',
+        notFound: 'Could not load course.',
+      };
+    case 'it':
+      return {
+        startCourse: 'Inizia il corso',
+        continueCourse: 'Continua il corso',
+        moduleLabel: (index: number) => `Modulo ${index + 1}`,
+        videoCount: (count: number) => `Contiene ${count} video`,
+        untitled: 'Senza titolo',
+        noImage: 'Nessuna copertina caricata',
+        loading: 'Caricamento corso …',
+        notFound: 'Impossibile caricare il corso.',
+      };
+    case 'sv':
+      return {
+        startCourse: 'Starta kurs',
+        continueCourse: 'Fortsätt kurs',
+        moduleLabel: (index: number) => `Modul ${index + 1}`,
+        videoCount: (count: number) => `Innehåller ${count} video${count > 1 ? 'r' : ''}`,
+        untitled: 'Utan titel',
+        noImage: 'Ingen omslagsbild uppladdad',
+        loading: 'Laddar kurs …',
+        notFound: 'Kunde inte ladda kursen.',
+      };
+    default:
+      return {
+        startCourse: 'Start kurs',
+        continueCourse: 'Fortsett kurs',
+        moduleLabel: (index: number) => `Emne ${index + 1}`,
+        videoCount: (count: number) => `Inneholder ${count} video${count > 1 ? 'er' : ''}`,
+        untitled: 'Uten tittel',
+        noImage: 'Ingen forsidebilde lastet opp',
+        loading: 'Laster kurs …',
+        notFound: 'Kunne ikke hente kurset.',
+      };
+  }
+};
+
 export default function CoursePreviewPage({
   params,
 }: {
@@ -168,6 +222,9 @@ export default function CoursePreviewPage({
 }) {
   const { courseId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedLang = searchParams.get('lang');
+  const { locale: uiLocale, setLocale } = useLocale();
   const { course, loading, error } = useCourse(courseId);
   const {
     modules,
@@ -175,7 +232,6 @@ export default function CoursePreviewPage({
     error: modulesError,
   } = useCourseModules(courseId);
 
-  // modules are already sorted by useCourseModules hook
   const sortedModules = modules;
 
   const availableLocales = useMemo(() => {
@@ -194,9 +250,13 @@ export default function CoursePreviewPage({
     return Array.from(set);
   }, [course, sortedModules]);
 
+  useEffect(() => {
+    if (requestedLang) setLocale(requestedLang);
+  }, [requestedLang, setLocale]);
+
   const locale = useMemo(
-    () => getPreferredLocale(availableLocales),
-    [availableLocales],
+    () => getPreferredLocale(availableLocales, uiLocale),
+    [availableLocales, uiLocale],
   );
 
   const description = getLocalizedValue(course?.description, locale);
@@ -233,12 +293,13 @@ export default function CoursePreviewPage({
     router.push(`/courses/${courseId}/modules/${nextModuleId}/preview?lang=${locale}`);
   };
 
-  const startButtonLabel = completedCount > 0 ? 'Fortsett kurs' : 'Start kurs';
+  const coursePageLabels = getCoursePageLabels(locale);
+  const startButtonLabel = completedCount > 0 ? coursePageLabels.continueCourse : coursePageLabels.startCourse;
 
   if (loading || modulesLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Laster kurs …
+        {coursePageLabels.loading}
       </div>
     );
   }
@@ -247,7 +308,7 @@ export default function CoursePreviewPage({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
-          {error ?? modulesError ?? 'Kunne ikke hente kurset.'}
+          {error ?? modulesError ?? coursePageLabels.notFound}
         </div>
       </div>
     );
@@ -268,7 +329,7 @@ export default function CoursePreviewPage({
           </div>
         ) : (
           <div className="flex h-48 items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-slate-500 sm:h-64 md:h-72">
-            Ingen forsidebilde lastet opp
+            {coursePageLabels.noImage}
           </div>
         )}
         <div className="flex flex-col gap-4 px-6 py-8 md:px-10">
@@ -322,10 +383,10 @@ export default function CoursePreviewPage({
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Emne {index + 1}
+                  {coursePageLabels.moduleLabel(index)}
                 </p>
                 <h3 className="text-lg font-semibold text-slate-900">
-                  {getLocalizedValue(module.title, locale) || 'Uten tittel'}
+                  {getLocalizedValue(module.title, locale) || coursePageLabels.untitled}
                 </h3>
                 {getLocalizedValue(module.summary, locale) && (
                   <p className="text-sm text-slate-600">
@@ -334,7 +395,7 @@ export default function CoursePreviewPage({
                 )}
                 {videoCount > 0 && (
                   <p className="mt-2 text-xs text-slate-400">
-                    Inneholder {videoCount} video{videoCount > 1 ? 'er' : ''}
+                    {coursePageLabels.videoCount(videoCount)}
                   </p>
                 )}
                 <div className="mt-4">
