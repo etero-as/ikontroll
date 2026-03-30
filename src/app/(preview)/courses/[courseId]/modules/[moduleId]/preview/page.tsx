@@ -721,7 +721,6 @@ export default function ModulePreviewPage({
             <p className="mt-4 text-base text-slate-600">{summary}</p>
           )}
         </div>
-      </header>
 
       {mediaItems.length > 0 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
@@ -803,8 +802,97 @@ export default function ModulePreviewPage({
                     </div>
                   )}
                 </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {questions.length > 0 && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-slate-900">{L.quizHeading}</h2>
+            <span className="text-sm text-slate-500">
+              {showSummary
+                ? L.summary
+                : L.questionCounter(currentIndex + 1, questions.length)}
+            </span>
+          </div>
+          {showSummary ? (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+                <p>
+                  {L.scoreText(
+                    questions.length - incorrectQuestions.length,
+                    questions.length,
+                    scorePercentage,
+                  )}
+                </p>
+                {isExamModule && (
+                  <p className="mt-2 text-sm font-semibold">
+                    {hasPassed ? L.examPassed : L.examFailed(requiredPercentage)}
+                  </p>
+                )}
               </div>
-            ) : currentQuestion ? (
+              {incorrectQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-sm font-semibold text-slate-700">{L.reviewPrompt}</p>
+                  {incorrectQuestions.map((question) => {
+                    const questionText = getLocalizedValue(question.contentText, locale);
+                    const correctIds = getCorrectAnswerIds(question);
+                    const correctAlternatives = question.alternatives.filter((alt) =>
+                      correctIds.includes(alt.id),
+                    );
+                    const selectedIds = answers[question.id] ?? [];
+                    const userAlternatives = question.alternatives.filter((alt) =>
+                      selectedIds.includes(alt.id),
+                    );
+                    const userAnswerText = userAlternatives.length
+                      ? userAlternatives
+                          .map((alt) => getAlternativeLabel(alt, locale, L.alternativeFallback))
+                          .join(', ')
+                      : '—';
+                    const correctAnswerText = correctAlternatives
+                      .map((alt) => getAlternativeLabel(alt, locale, L.alternativeFallback))
+                      .join(', ');
+                    return (
+                      <div
+                        key={question.id}
+                        className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4"
+                      >
+                        <p className="text-base font-semibold text-red-700">
+                          {questionText || L.questionFallback}
+                        </p>
+                        <p className="mt-2 text-sm text-red-600">
+                          {L.yourAnswer} {userAnswerText}
+                        </p>
+                        {correctAnswerText && (
+                          <p className="text-sm text-slate-600">
+                            {L.correctAnswer} {correctAnswerText}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
+                  {L.allCorrect}
+                </div>
+              )}
+              {incorrectQuestions.length > 0 && (
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={resetQuiz}
+                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {L.retakeQuiz}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : currentQuestion ? (
               <div className="space-y-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base font-semibold text-slate-700">
                   {getLocalizedValue(currentQuestion.contentText, locale) ||
