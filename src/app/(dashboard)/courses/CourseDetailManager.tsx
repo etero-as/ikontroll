@@ -51,6 +51,7 @@ import DragHandle from '@/components/DragHandle';
 import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
 import { getTranslation } from '@/utils/translations';
+import MediaPicker from '@/components/MediaPicker';
 import {
   Course,
   CourseModule,
@@ -448,6 +449,8 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   const [courseImageUrl, setCourseImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const imageFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setCourseImageUrl(course?.courseImageUrl ?? null);
@@ -612,6 +615,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         questions,
         languages: targetLanguages,
         moduleType: isExamModule ? 'exam' : 'normal',
+        mediaSync: false,
         ...(isExamModule ? { examPassPercentage: sanitizedPassPercentage } : {}),
       };
 
@@ -731,6 +735,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         questions: duplicateTarget.questions ?? [],
         languages: nextLanguages,
         moduleType: duplicateTarget.moduleType ?? 'normal',
+        mediaSync: duplicateTarget.mediaSync ?? false,
         ...(duplicateTarget.moduleType === 'exam' &&
         typeof duplicateTarget.examPassPercentage === 'number'
           ? { examPassPercentage: duplicateTarget.examPassPercentage }
@@ -989,6 +994,11 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     }
   };
 
+  const handleLibraryImageSelect = (asset: { url: string }) => {
+    setCourseImageUrl(asset.url);
+    form.setValue('courseImageUrl', asset.url, { shouldDirty: true });
+  };
+
   const moduleList = moduleItems.length ? (
     <DndContext
       sensors={sensors}
@@ -1126,17 +1136,31 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 </button>
               )}
             </div>
+            {showImagePicker && typeof window !== 'undefined' && (
+              <MediaPicker
+                onSelect={handleLibraryImageSelect}
+                onUploadClick={() => imageFileInputRef.current?.click()}
+                allowedTypes={['image']}
+                onClose={() => setShowImagePicker(false)}
+              />
+            )}
+            <input
+              ref={imageFileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCourseImageChange}
+              className="hidden"
+              disabled={uploadingImage}
+            />
             <div className="flex items-center gap-4">
-              <label className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setShowImagePicker(true)}
+                disabled={uploadingImage}
+                className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <span>{uploadingImage ? t.common.uploading : t.admin.courseDetail.chooseImage}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCourseImageChange}
-                  className="hidden"
-                  disabled={uploadingImage}
-                />
-              </label>
+              </button>
               {courseImageUrl ? (
                 <div className="relative h-28 w-48 overflow-hidden rounded-xl border border-slate-200">
                   <Image

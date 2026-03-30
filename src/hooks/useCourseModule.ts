@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
-import { normalizeModuleMediaMap } from '@/utils/media';
+import { normalizeModuleMediaMap, normalizeToPoolModel } from '@/utils/media';
 import type {
   CourseModule,
   CourseQuestion,
   CourseModuleType,
   LocaleStringArrayMap,
   LocaleStringMap,
+  ModuleMediaPoolItem,
+  ModuleMediaSelections,
 } from '@/types/course';
 const normalizeLocaleMap = (value: unknown): LocaleStringMap => {
   if (!value) {
@@ -137,13 +139,28 @@ export const useCourseModule = (
               ? data.examPassPercentage
               : undefined;
           const status = normalizeModuleStatus(data.status);
+          const mediaSyncValue = typeof data.mediaSync === 'boolean' ? data.mediaSync : undefined;
+          const media = normalizeModuleMediaMap(data.media, data.imageUrls, data.videoUrls);
+
+          // Pool model: use stored pool if available, otherwise migrate from legacy
+          let mediaPool: ModuleMediaPoolItem[] | undefined;
+          let mediaSelections: ModuleMediaSelections | undefined;
+          if (Array.isArray(data.mediaPool)) {
+            mediaPool = data.mediaPool as ModuleMediaPoolItem[];
+            mediaSelections = (data.mediaSelections ?? {}) as ModuleMediaSelections;
+          } else {
+            const migrated = normalizeToPoolModel(media, mediaSyncValue);
+            mediaPool = migrated.pool;
+            mediaSelections = migrated.selections;
+          }
+
           setModule({
             id: snapshot.id,
             courseId,
             title: normalizeLocaleMap(data.title),
             summary: normalizeLocaleMap(data.summary),
             body: normalizeLocaleMap(data.body),
-            media: normalizeModuleMediaMap(data.media, data.imageUrls, data.videoUrls),
+            media,
             videoUrls: normalizeLocaleArrayMap(data.videoUrls),
             imageUrls: normalizeLocaleArrayMap(data.imageUrls),
             order: data.order ?? 0,
@@ -153,7 +170,9 @@ export const useCourseModule = (
             languages: normalizeLanguages(data.languages),
             moduleType,
             examPassPercentage,
-            mediaSync: typeof data.mediaSync === 'boolean' ? data.mediaSync : undefined,
+            mediaPool,
+            mediaSelections,
+            mediaSync: mediaSyncValue,
             status,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,

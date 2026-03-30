@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { db, storage } from '@/lib/firebase';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
+import MediaPicker from '@/components/MediaPicker';
 
 type DiplomaFormValues = {
   title: string;
@@ -70,6 +71,8 @@ export default function TemplatesPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const signatureInputRef = useRef<HTMLInputElement | null>(null);
+  const [showLogoPicker, setShowLogoPicker] = useState(false);
+  const [showSignaturePicker, setShowSignaturePicker] = useState(false);
 
   const issuerFallback = useMemo(() => {
     if (!profile?.companyIds?.length) {
@@ -329,11 +332,19 @@ export default function TemplatesPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-700">{t.admin.templates.logoSection}</p>
               <p className="text-xs text-slate-500">{t.admin.templates.logoHint}</p>
+              {showLogoPicker && typeof window !== 'undefined' && (
+                <MediaPicker
+                  onSelect={(asset) => { setLogoUrl(asset.url); }}
+                  onUploadClick={() => logoInputRef.current?.click()}
+                  allowedTypes={['image']}
+                  onClose={() => setShowLogoPicker(false)}
+                />
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
                 <button
                   type="button"
-                  onClick={() => logoInputRef.current?.click()}
+                  onClick={() => setShowLogoPicker(true)}
                   disabled={uploadingLogo}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -354,6 +365,14 @@ export default function TemplatesPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-700">{t.admin.templates.signatureSection}</p>
               <p className="text-xs text-slate-500">{t.admin.templates.signatureHint}</p>
+              {showSignaturePicker && typeof window !== 'undefined' && (
+                <MediaPicker
+                  onSelect={(asset) => { setSignatureUrl(asset.url); }}
+                  onUploadClick={() => signatureInputRef.current?.click()}
+                  allowedTypes={['image']}
+                  onClose={() => setShowSignaturePicker(false)}
+                />
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <input
                   ref={signatureInputRef}
@@ -388,7 +407,7 @@ export default function TemplatesPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => signatureInputRef.current?.click()}
+                  onClick={() => setShowSignaturePicker(true)}
                   disabled={uploadingSignature}
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >

@@ -45,13 +45,16 @@ export const getLocalizedValue = (
   locale: string,
 ): string => {
   if (!value) return '';
-  return (
-    value[locale] ??
-    value.no ??
-    value.en ??
-    Object.values(value).find((entry) => entry?.trim()) ??
-    ''
+  const candidates = [
+    value[locale],
+    value.no,
+    value.en,
+    ...Object.values(value),
+  ];
+  const match = candidates.find(
+    (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0,
   );
+  return match ?? '';
 };
 
 export const getLocalizedList = (
@@ -59,13 +62,14 @@ export const getLocalizedList = (
   locale: string,
 ): string[] => {
   if (!value) return [];
-  return (
-    value[locale] ??
-    value.no ??
-    value.en ??
-    Object.values(value).find((entry) => entry && entry.length) ??
-    []
-  );
+  const candidates = [
+    value[locale],
+    value.no,
+    value.en,
+    ...Object.values(value),
+  ];
+  const match = candidates.find((entry) => Array.isArray(entry) && entry.length > 0);
+  return match ?? [];
 };
 
 export const getDateLocale = (locale: string): string => {

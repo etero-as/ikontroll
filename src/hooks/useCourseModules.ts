@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
-import { normalizeModuleMediaMap } from '@/utils/media';
+import { normalizeModuleMediaMap, normalizeToPoolModel } from '@/utils/media';
 import type {
   CourseModule,
   CourseModulePayload,
@@ -21,6 +21,8 @@ import type {
   CourseModuleType,
   LocaleStringArrayMap,
   LocaleStringMap,
+  ModuleMediaPoolItem,
+  ModuleMediaSelections,
 } from '@/types/course';
 const normalizeLocaleMap = (value: unknown): LocaleStringMap => {
   if (!value) {
@@ -157,13 +159,28 @@ export const useCourseModules = (
               ? data.examPassPercentage
               : undefined;
           const status = normalizeModuleStatus(data.status);
+          const mediaSyncValue = typeof data.mediaSync === 'boolean' ? data.mediaSync : undefined;
+          const media = normalizeModuleMediaMap(data.media, data.imageUrls, data.videoUrls);
+
+          // Pool model: use stored pool if available, otherwise migrate from legacy
+          let mediaPool: ModuleMediaPoolItem[] | undefined;
+          let mediaSelections: ModuleMediaSelections | undefined;
+          if (Array.isArray(data.mediaPool)) {
+            mediaPool = data.mediaPool as ModuleMediaPoolItem[];
+            mediaSelections = (data.mediaSelections ?? {}) as ModuleMediaSelections;
+          } else {
+            const migrated = normalizeToPoolModel(media, mediaSyncValue);
+            mediaPool = migrated.pool;
+            mediaSelections = migrated.selections;
+          }
+
           return {
             id: docSnap.id,
             courseId,
             title: normalizeLocaleMap(data.title),
             summary: normalizeLocaleMap(data.summary),
             body: normalizeLocaleMap(data.body),
-            media: normalizeModuleMediaMap(data.media, data.imageUrls, data.videoUrls),
+            media,
             videoUrls: normalizeLocaleArrayMap(data.videoUrls),
             imageUrls: normalizeLocaleArrayMap(data.imageUrls),
             order: orderValue,
@@ -173,6 +190,9 @@ export const useCourseModules = (
             languages: normalizeLanguages(data.languages),
             moduleType,
             examPassPercentage,
+            mediaPool,
+            mediaSelections,
+            mediaSync: mediaSyncValue,
             status,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,

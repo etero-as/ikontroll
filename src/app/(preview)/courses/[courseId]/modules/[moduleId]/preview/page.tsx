@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useRef, useState, Fragment } from 'react';
+import { use, useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Dialog, Transition } from '@headlessui/react';
@@ -16,8 +16,10 @@ import {
   getPreferredLocale,
 } from '@/utils/localization';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import AnnotatedImage from '@/components/AnnotatedImage';
 import { useLocale } from '@/context/LocaleContext';
 import type {
+  AnnotationShape,
   CourseQuestion,
   CourseQuestionAlternative,
 } from '@/types/course';
@@ -294,7 +296,7 @@ export default function ModulePreviewPage({
     }
   });
 
-  const markModuleComplete = (targetModuleId: string, isComplete: boolean) => {
+  const markModuleComplete = useCallback((targetModuleId: string, isComplete: boolean) => {
     setCompletedModules((prev) => {
       const next = isComplete
         ? Array.from(new Set([...prev, targetModuleId]))
@@ -304,7 +306,7 @@ export default function ModulePreviewPage({
       } catch {}
       return next;
     });
-  };
+  }, [completedSessionKey]);
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
@@ -347,7 +349,13 @@ export default function ModulePreviewPage({
   const localizedMedia = getLocalizedMediaItems(module?.media, locale);
   const images = getLocalizedList(module?.imageUrls, locale);
   const videos = getLocalizedList(module?.videoUrls, locale);
-  type PreviewMediaItem = { id: string; url: string; type: 'image' | 'video' | 'document'; caption?: string };
+  type PreviewMediaItem = {
+    id: string;
+    url: string;
+    type: 'image' | 'video' | 'document';
+    caption?: string;
+    annotations?: AnnotationShape[];
+  };
   const mediaItems: PreviewMediaItem[] = localizedMedia.length
     ? localizedMedia
     : [
@@ -357,7 +365,34 @@ export default function ModulePreviewPage({
 
   const moduleTitle = getLocalizedValue(module?.title, locale) || L.moduleLabel;
   const summary = getLocalizedValue(module?.summary, locale);
-  const bodyHtml = getLocalizedValue(module?.body, locale);
+  const rawBodyHtml = getLocalizedValue(module?.body, locale);
+  const bodyHtml = useMemo(() => {
+    if (!rawBodyHtml) return '';
+    const containsHtmlTags = /<\/?[a-z][\s\S]*>/i.test(rawBodyHtml);
+    if (containsHtmlTags) {
+      return rawBodyHtml;
+    }
+    const parts = rawBodyHtml.split('\n').map((line) => line.trim());
+    return parts
+      .map((line) => (line.length ? `<p>${line}</p>` : '<br />'))
+      .join('');
+  }, [rawBodyHtml]);
+  const bodyHtmlWithExternalLinks = useMemo(() => {
+    if (!bodyHtml) return '';
+    if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+      return bodyHtml;
+    }
+    try {
+      const doc = new DOMParser().parseFromString(bodyHtml, 'text/html');
+      doc.querySelectorAll('a[href]').forEach((anchor) => {
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+      });
+      return doc.body.innerHTML;
+    } catch {
+      return bodyHtml;
+    }
+  }, [bodyHtml]);
   const questions = useMemo(() => module?.questions ?? [], [module?.questions]);
   const isModuleCompleted = completedModules.includes(moduleId);
 
@@ -501,11 +536,13 @@ export default function ModulePreviewPage({
   useEffect(() => {
     if (!module?.id || !showSummary || questions.length === 0) return;
     markModuleComplete(module.id, hasPassed);
-  }, [module?.id, showSummary, hasPassed, questions.length]);
+  }, [module?.id, showSummary, hasPassed, questions.length, markModuleComplete]);
 
   const [mediaPreview, setMediaPreview] = useState<{
     url: string;
     type: MediaPreviewType;
+    caption?: string;
+    annotations?: AnnotationShape[];
   } | null>(null);
   const [previewImgError, setPreviewImgError] = useState(false);
   useEffect(() => {
@@ -662,15 +699,22 @@ export default function ModulePreviewPage({
                 {mediaItems.map((item) => {
                   const isVideo = item.type === 'video';
                   const isDoc = item.type === 'document';
+                  const hasAnnotationData = item.annotations && item.annotations.length > 0;
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() =>
-                        setMediaPreview({ url: item.url, type: item.type })
+                        setMediaPreview({
+                          url: item.url,
+                          type: item.type,
+                          caption: item.caption,
+                          annotations: item.annotations,
+                        })
                       }
-                      className="relative h-[165px] w-[165px] flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-slate-300"
+                      className="flex w-[165px] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-slate-300"
                     >
+                      <div className="relative h-[165px] w-full overflow-hidden bg-slate-100">
                       {isVideo ? (
                         <>
                           {isYouTubeUrl(item.url) ? (
@@ -707,12 +751,21 @@ export default function ModulePreviewPage({
                             {getFileNameFromUrl(item.url)}
                           </span>
                         </div>
-                      ) : (
-                        <PreviewMediaImage
+                      ) : hasAnnotationData ? (
+                        <AnnotatedImage
                           src={item.url}
                           alt="Modulbilde"
-                          className="h-full w-full object-contain"
+                          annotations={item.annotations}
+                          className="h-full w-full"
                         />
+                      ) : (
+                        <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                      )}
+                      </div>
+                      {item.caption && (
+                        <div className="w-full border-t border-slate-200 bg-slate-50 px-2 py-1.5 text-left text-xs leading-snug text-slate-600">
+                          {item.caption}
+                        </div>
                       )}
                     </button>
                   );
@@ -726,89 +779,13 @@ export default function ModulePreviewPage({
           )}
         </div>
 
-      {mediaItems.length > 0 && (
+      {bodyHtmlWithExternalLinks && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-          <h2 className="text-xl font-semibold text-slate-900">Mediegalleri</h2>
-          <div className="mt-4 grid gap-6 md:grid-cols-2">
-            {mediaItems.map((item) => {
-              if (item.type === 'image') {
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
-                  >
-                    <div className="relative h-56 shrink-0 overflow-hidden bg-slate-100">
-                      <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
-                    </div>
-                    {item.caption && (
-                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
-                        {item.caption}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              if (item.type === 'video') {
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
-                  >
-                    <div className="h-56 shrink-0 bg-black flex items-center justify-center">
-                      {isYouTubeUrl(item.url) ? (
-                        <iframe
-                          src={item.url}
-                          title="Modulvideo"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="h-full w-full"
-                        />
-                      ) : (
-                        <video controls className="h-full w-full object-contain">
-                          <source src={item.url} />
-                          Nettleseren din støtter ikke video.
-                        </video>
-                      )}
-                    </div>
-                    {item.caption && (
-                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
-                        {item.caption}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
-                >
-                  <div className="h-56 shrink-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-4 text-center">
-                    <span className="text-4xl" role="img" aria-label="PDF">
-                      📄
-                    </span>
-                    <p className="text-xs font-semibold text-slate-700 break-all">
-                      {getFileNameFromUrl(item.url)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      Åpne PDF
-                    </button>
-                  </div>
-                  {item.caption && (
-                    <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
-                      {item.caption}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <h2 className="text-xl font-semibold text-slate-900">{L.content}</h2>
+          <div
+            className="prose prose-slate mt-4 max-w-none"
+            dangerouslySetInnerHTML={{ __html: bodyHtmlWithExternalLinks }}
+          />
         </section>
       )}
 
@@ -998,6 +975,7 @@ export default function ModulePreviewPage({
                     ✕
                   </button>
                   {mediaPreview && (
+                    <>
                     <div className="flex w-full items-center justify-center overflow-hidden bg-slate-100">
                       {mediaPreview.type === 'video' ? (
                         isYouTubeUrl(mediaPreview.url) ? (
@@ -1033,6 +1011,15 @@ export default function ModulePreviewPage({
                             🖼️
                           </span>
                         </div>
+                      ) : mediaPreview.annotations?.length ? (
+                        <div className="h-[85vh] w-full">
+                          <AnnotatedImage
+                            src={mediaPreview.url}
+                            alt="Modulbilde"
+                            annotations={mediaPreview.annotations}
+                            className="h-full w-full"
+                          />
+                        </div>
                       ) : (
                         <Image
                           src={mediaPreview.url}
@@ -1052,6 +1039,12 @@ export default function ModulePreviewPage({
                         />
                       )}
                     </div>
+                    {mediaPreview.caption && (
+                      <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-700">
+                        {mediaPreview.caption}
+                      </div>
+                    )}
+                    </>
                   )}
                 </Dialog.Panel>
               </Transition.Child>

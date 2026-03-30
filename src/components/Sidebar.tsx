@@ -23,6 +23,7 @@ export const Sidebar = () => {
       { href: '/customers', label: t.admin.sidebar.nav.customers },
       { href: '/courses', label: t.admin.sidebar.nav.courses },
       { href: '/templates', label: t.admin.sidebar.nav.templates },
+      { href: '/media', label: t.admin.sidebar.nav.mediaLibrary },
     ],
     [t]
   );
