@@ -41,6 +41,7 @@ import { useCourseModule } from '@/hooks/useCourseModule';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
 import DuplicateButton from '@/components/DuplicateButton';
+import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
 import type {
   CourseModulePayload,
   CourseQuestion,
@@ -201,6 +202,7 @@ export default function CourseModuleDetailPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const [languageInput, setLanguageInput] = useState('');
+  const [languageInputError, setLanguageInputError] = useState(false);
   const languageInputRef = useRef<HTMLInputElement | null>(null);
   const initializedModuleIdRef = useRef<string | null>(null);
   const languageScrollRestoreRef = useRef<number | null>(null);
@@ -228,6 +230,7 @@ export default function CourseModuleDetailPage() {
       questions: module.questions ?? [],
       moduleType,
       examPassPercentage,
+      mediaSync: module.mediaSync ?? false,
     };
 
     const isFirstLoad = initializedModuleIdRef.current !== moduleId;
@@ -301,28 +304,35 @@ export default function CourseModuleDetailPage() {
     setActiveLanguage(trimmed);
     setLanguageInput('');
     setIsAddingLanguage(false);
-    setDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            title: ensureLocaleKeys(prev.title, nextLanguages),
-            summary: ensureLocaleKeys(prev.summary, nextLanguages),
-            body: ensureLocaleKeys(prev.body, nextLanguages),
-            media: ensureMediaLocales(prev.media, nextLanguages),
-            videoUrls: ensureLocaleArrayKeys(prev.videoUrls, nextLanguages),
-            imageUrls: ensureLocaleArrayKeys(prev.imageUrls, nextLanguages),
-            questions: prev.questions.map((question) => ({
-              ...question,
-              title: ensureLocaleKeys(question.title, nextLanguages),
-              contentText: ensureLocaleKeys(question.contentText, nextLanguages),
-              alternatives: question.alternatives.map((alt) => ({
-                ...alt,
-                altText: ensureLocaleKeys(alt.altText, nextLanguages),
-              })),
-            })),
-          }
-        : prev,
-    );
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const baseMedia = ensureMediaLocales(prev.media, nextLanguages);
+      if (prev.mediaSync) {
+        const sourceItems =
+          prev.media?.[languages[0]] ?? prev.media?.[Object.keys(prev.media)[0]] ?? [];
+        if (sourceItems.length > 0) {
+          baseMedia[trimmed] = sourceItems.map((item) => ({ ...item }));
+        }
+      }
+      return {
+        ...prev,
+        title: ensureLocaleKeys(prev.title, nextLanguages),
+        summary: ensureLocaleKeys(prev.summary, nextLanguages),
+        body: ensureLocaleKeys(prev.body, nextLanguages),
+        media: baseMedia,
+        videoUrls: ensureLocaleArrayKeys(prev.videoUrls, nextLanguages),
+        imageUrls: ensureLocaleArrayKeys(prev.imageUrls, nextLanguages),
+        questions: prev.questions.map((question) => ({
+          ...question,
+          title: ensureLocaleKeys(question.title, nextLanguages),
+          contentText: ensureLocaleKeys(question.contentText, nextLanguages),
+          alternatives: question.alternatives.map((alt) => ({
+            ...alt,
+            altText: ensureLocaleKeys(alt.altText, nextLanguages),
+          })),
+        })),
+      };
+    });
   };
 
   const removeLanguage = (lang: string) => {
@@ -427,6 +437,7 @@ export default function CourseModuleDetailPage() {
         questions: draft.questions ?? [],
         moduleType: draft.moduleType ?? 'normal',
         languages,
+        mediaSync: draft.mediaSync ?? false,
         updatedAt: serverTimestamp(),
       };
       if (draft.moduleType === 'exam') {
@@ -532,14 +543,20 @@ export default function CourseModuleDetailPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                setLanguageInputError(false);
                 addLanguage(languageInput);
               }}
-              className="flex items-center gap-2"
+              className="relative flex items-center gap-2"
             >
               <input
                 ref={languageInputRef}
                 value={languageInput}
-                onChange={(e) => setLanguageInput(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^a-zA-Z]/g, '');
+                  setLanguageInputError(cleaned !== raw && raw.length > 0);
+                  setLanguageInput(cleaned);
+                }}
                 placeholder={t.common.languageCode}
                 className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
               />
@@ -554,12 +571,18 @@ export default function CourseModuleDetailPage() {
                 onClick={() => {
                   setIsAddingLanguage(false);
                   setLanguageInput('');
+                  setLanguageInputError(false);
                 }}
                 className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
                 aria-label={t.common.cancel}
               >
                 ×
               </button>
+              {languageInputError && (
+                <p className="pointer-events-none absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-red-500">
+                  {t.common.languageCodeOnlyLetters}
+                </p>
+              )}
             </form>
           ) : (
             <>
@@ -650,6 +673,9 @@ export default function CourseModuleDetailPage() {
               activeLanguage={activeLanguage}
               courseId={courseId}
               moduleId={moduleId}
+              languages={languages}
+              mediaSync={draft.mediaSync ?? false}
+              onMediaSyncChange={(next) => updateField('mediaSync', next)}
             />
           </div>
 
@@ -1139,10 +1165,12 @@ MediaDragOverlay.displayName = 'MediaDragOverlay';
 const SortableMediaCard = ({
   item,
   onRemove,
+  onCaptionChange,
   isTarget,
 }: {
   item: ModuleMediaItem;
   onRemove: () => void;
+  onCaptionChange: (caption: string) => void;
   isTarget: boolean;
 }) => {
   const { locale } = useLocale();
@@ -1249,6 +1277,28 @@ const SortableMediaCard = ({
               {t.common.remove}
             </button>
           </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-600">
+              {item.type === 'video'
+                ? t.admin.moduleDetail.mediaCaptionLabelVideo
+                : item.type === 'document'
+                  ? t.admin.moduleDetail.mediaCaptionLabelDocument
+                  : t.admin.moduleDetail.mediaCaptionLabelImage}
+            </span>
+            <input
+              type="text"
+              value={item.caption ?? ''}
+              onChange={(e) => onCaptionChange(e.target.value)}
+              placeholder={
+                item.type === 'video'
+                  ? t.admin.moduleDetail.mediaCaptionPlaceholderVideo
+                  : item.type === 'document'
+                    ? t.admin.moduleDetail.mediaCaptionPlaceholderDocument
+                    : t.admin.moduleDetail.mediaCaptionPlaceholderImage
+              }
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            />
+          </label>
         </div>
       </div>
     </div>
@@ -1262,6 +1312,9 @@ const LocaleMediaEditor = ({
   activeLanguage,
   courseId,
   moduleId,
+  languages,
+  mediaSync,
+  onMediaSyncChange,
 }: {
   label: string;
   media: LocaleModuleMediaMap;
@@ -1269,6 +1322,9 @@ const LocaleMediaEditor = ({
   activeLanguage: string;
   courseId: string;
   moduleId: string;
+  languages: string[];
+  mediaSync: boolean;
+  onMediaSyncChange: (next: boolean) => void;
 }) => {
   const { locale } = useLocale();
   const t = getTranslation(locale);
@@ -1277,17 +1333,144 @@ const LocaleMediaEditor = ({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState<'image' | 'video' | 'document' | null>(null);
+  const [reuseSourceLang, setReuseSourceLang] = useState('');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const langsWithMedia = useMemo(
+    () => languages.filter((lang) => lang !== activeLanguage && (media[lang] ?? []).length > 0),
+    [languages, activeLanguage, media],
+  );
+
+  const effectiveReuseSource = langsWithMedia.includes(reuseSourceLang)
+    ? reuseSourceLang
+    : langsWithMedia[0] ?? '';
+
+  const applySyncFromBase = useCallback(
+    (baseItems: ModuleMediaItem[], currentMedia: LocaleModuleMediaMap): LocaleModuleMediaMap => {
+      const nextMedia: LocaleModuleMediaMap = {};
+      languages.forEach((lang) => {
+        const captionMap = new Map((currentMedia[lang] ?? []).map((item) => [item.id, item.caption]));
+        nextMedia[lang] = baseItems.map((item) => {
+          const result = { ...item };
+          const caption = captionMap.get(item.id);
+          if (caption) result.caption = caption;
+          else delete result.caption;
+          return result;
+        });
+      });
+      return nextMedia;
+    },
+    [languages],
+  );
 
   const updateList = useCallback(
     (next: ModuleMediaItem[]) => {
-      onChange({
-        ...(media ?? {}),
-        [activeLanguage]: next,
-      });
+      if (mediaSync) {
+        onChange(applySyncFromBase(next, media));
+      } else {
+        onChange({ ...(media ?? {}), [activeLanguage]: next });
+      }
     },
-    [media, activeLanguage, onChange],
+    [media, activeLanguage, onChange, mediaSync, applySyncFromBase],
   );
+
+  type SyncConflictItem = {
+    lang: string;
+    extraItems: ModuleMediaItem[];
+    missingCount: number;
+  };
+
+  const [pendingSyncEnable, setPendingSyncEnable] = useState<{
+    baseItems: ModuleMediaItem[];
+    conflicts: SyncConflictItem[];
+  } | null>(null);
+
+  const syncConflictUniqueMissing = useMemo(() => {
+    if (!pendingSyncEnable) return [];
+    const seen = new Map<string, { item: ModuleMediaItem; fromLangs: string[] }>();
+    pendingSyncEnable.conflicts.forEach(({ lang, extraItems }) => {
+      extraItems.forEach((item) => {
+        if (seen.has(item.id)) {
+          seen.get(item.id)!.fromLangs.push(lang);
+        } else {
+          seen.set(item.id, { item, fromLangs: [lang] });
+        }
+      });
+    });
+    return Array.from(seen.values());
+  }, [pendingSyncEnable?.conflicts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const syncConflictBaseIds = useMemo(
+    () => new Set((pendingSyncEnable?.baseItems ?? []).map((i) => i.id)),
+    [pendingSyncEnable?.baseItems],
+  );
+
+  const syncConflictConsequences = useMemo(() => {
+    if (!pendingSyncEnable) return [];
+    const baseIds = new Set(pendingSyncEnable.baseItems.map((i) => i.id));
+    return languages
+      .filter((lang) => lang !== activeLanguage)
+      .map((lang) => {
+        const langItems = media[lang] ?? [];
+        const langIds = new Set(langItems.map((i) => i.id));
+        const willGain = pendingSyncEnable.baseItems.filter((i) => !langIds.has(i.id)).length;
+        const willLose = langItems.filter((i) => !baseIds.has(i.id)).length;
+        return { lang, willGain, willLose };
+      })
+      .filter(({ willGain, willLose }) => willGain > 0 || willLose > 0);
+  }, [pendingSyncEnable?.baseItems, languages, activeLanguage, media]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [pendingSyncDelete, setPendingSyncDelete] = useState<{
+    id: string;
+    url: string;
+  } | null>(null);
+
+  const confirmSyncDelete = () => {
+    if (!pendingSyncDelete) return;
+    const { id, url } = pendingSyncDelete;
+    const nextMedia: LocaleModuleMediaMap = {};
+    languages.forEach((lang) => {
+      nextMedia[lang] = (media[lang] ?? []).filter((item) => item.id !== id);
+    });
+    onChange(nextMedia);
+    void maybeDeleteUploadedFile(url);
+    setPendingSyncDelete(null);
+  };
+
+  const [expandedConflictInfoIds, setExpandedConflictInfoIds] = useState<Set<string>>(new Set());
+
+  const closeSyncConflictDialog = () => {
+    setPendingSyncEnable(null);
+    setExpandedConflictInfoIds(new Set());
+  };
+
+
+  const handleSyncToggle = () => {
+    if (mediaSync) {
+      onMediaSyncChange(false);
+      return;
+    }
+
+    const currentIds = new Set(items.map((i) => i.id));
+    const conflicts: SyncConflictItem[] = [];
+    languages.forEach((lang) => {
+      if (lang === activeLanguage) return;
+      const langItems = media[lang] ?? [];
+      const langIds = new Set(langItems.map((i) => i.id));
+      const extraItems = langItems.filter((i) => !currentIds.has(i.id));
+      const missingCount = items.filter((i) => !langIds.has(i.id)).length;
+      if (extraItems.length > 0 || missingCount > 0) {
+        conflicts.push({ lang, extraItems, missingCount });
+      }
+    });
+
+    if (conflicts.length > 0) {
+      setPendingSyncEnable({ baseItems: [...items], conflicts });
+    } else {
+      onChange(applySyncFromBase(items, media));
+      onMediaSyncChange(true);
+    }
+  };
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<ModuleMediaItem | null>(null);
@@ -1344,13 +1527,78 @@ const LocaleMediaEditor = ({
     setOverId(null);
   }, []);
 
+  const [pendingRemove, setPendingRemove] = useState<{
+    id: string;
+    url: string;
+    otherLangs: string[];
+  } | null>(null);
+
   const handleRemove = (id: string) => {
     const target = items.find((item) => item.id === id);
-    updateList(items.filter((item) => item.id !== id));
-    if (target) {
+    if (!target) return;
+
+    if (mediaSync) {
+      setPendingSyncDelete({ id, url: target.url });
+      return;
+    }
+
+    const otherLangsWithItem = languages.filter(
+      (lang) => lang !== activeLanguage && (media[lang] ?? []).some((item) => item.id === id),
+    );
+    if (otherLangsWithItem.length > 0) {
+      setPendingRemove({ id, url: target.url, otherLangs: otherLangsWithItem });
+    } else {
+      updateList(items.filter((item) => item.id !== id));
       void maybeDeleteUploadedFile(target.url);
     }
   };
+
+  const confirmRemoveFromAll = () => {
+    if (!pendingRemove) return;
+    const { id, url, otherLangs } = pendingRemove;
+    const nextMedia: LocaleModuleMediaMap = { ...media };
+    [activeLanguage, ...otherLangs].forEach((lang) => {
+      nextMedia[lang] = (nextMedia[lang] ?? []).filter((item) => item.id !== id);
+    });
+    onChange(nextMedia);
+    void maybeDeleteUploadedFile(url);
+    setPendingRemove(null);
+  };
+
+  const confirmRemoveFromActive = () => {
+    if (!pendingRemove) return;
+    updateList(items.filter((item) => item.id !== pendingRemove.id));
+    setPendingRemove(null);
+  };
+
+  const handleReuse = (requireConfirm: boolean) => {
+    const sourceLang = effectiveReuseSource;
+    if (!sourceLang) return;
+    if (requireConfirm) {
+      const confirmed = window.confirm(
+        t.admin.moduleDetail.mediaReuseConfirm(sourceLang.toUpperCase()),
+      );
+      if (!confirmed) return;
+    }
+    updateList([...(media[sourceLang] ?? [])]);
+  };
+
+  const reuseInfo = useMemo(() => {
+    if (!effectiveReuseSource) return { missing: 0, total: 0 };
+    const sourceItems = media[effectiveReuseSource] ?? [];
+    if (sourceItems.length === 0) return { missing: 0, total: 0 };
+    const activeIds = new Set(items.map((i) => i.id));
+    const missing = sourceItems.filter((s) => !activeIds.has(s.id)).length;
+    return { missing, total: sourceItems.length };
+  }, [effectiveReuseSource, media, items]);
+
+  const alreadyReused = reuseInfo.total > 0 && reuseInfo.missing === 0;
+
+  const reuseButtonLabel = alreadyReused
+    ? t.admin.moduleDetail.mediaAlreadyReused
+    : reuseInfo.missing > 0 && reuseInfo.missing < reuseInfo.total
+      ? t.admin.moduleDetail.mediaReuseMissing(reuseInfo.missing)
+      : t.admin.moduleDetail.mediaReuseFrom;
 
 
   const handleUploadClick = (type: 'image' | 'video' | 'document') => {
@@ -1400,9 +1648,301 @@ const LocaleMediaEditor = ({
   return (
     <div className="space-y-3">
       <LocaleEditorHeader label={label} activeLanguage={activeLanguage} />
+      {pendingRemove && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setPendingRemove(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-slate-900">
+              {t.admin.moduleDetail.mediaRemovePendingTitle}
+            </p>
+            <p className="text-sm text-slate-600">
+              {t.admin.moduleDetail.mediaRemovePendingMessage(
+                pendingRemove.otherLangs.map((l) => l.toUpperCase()).join(', '),
+              )}
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={confirmRemoveFromAll}
+                className="cursor-pointer rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300 hover:bg-red-50 text-left"
+              >
+                {t.admin.moduleDetail.mediaRemoveFromAll}
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveFromActive}
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 text-left"
+              >
+                {t.admin.moduleDetail.mediaRemoveFromActiveOnly(activeLanguage.toUpperCase())}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingRemove(null)}
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 text-left"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+      {pendingSyncDelete && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setPendingSyncDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-slate-900">
+              {t.admin.moduleDetail.mediaSyncDeleteTitle}
+            </p>
+            <p className="text-sm text-slate-600">
+              {t.admin.moduleDetail.mediaSyncDeleteMessage}
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={confirmSyncDelete}
+                className="cursor-pointer rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300 hover:bg-red-50 text-left"
+              >
+                {t.admin.moduleDetail.mediaSyncDeleteConfirm}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingSyncDelete(null)}
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 text-left"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+      {pendingSyncEnable && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-24"
+          onClick={closeSyncConflictDialog}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-900">
+                {t.admin.moduleDetail.mediaSyncConflictTitle}
+              </p>
+              <p className="text-sm text-slate-500">
+                {syncConflictUniqueMissing.length === 0
+                  ? t.admin.moduleDetail.mediaSyncConflictDescCurrentHasMore
+                  : t.admin.moduleDetail.mediaSyncConflictDesc(
+                      activeLanguage.toUpperCase(),
+                      syncConflictUniqueMissing.length,
+                    )}
+              </p>
+            </div>
+            {syncConflictUniqueMissing.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {syncConflictUniqueMissing.map(({ item, fromLangs }) => {
+                  const added = syncConflictBaseIds.has(item.id);
+                  const typeLabel =
+                    item.type === 'video'
+                      ? t.admin.moduleDetail.mediaTypeVideo
+                      : item.type === 'document'
+                        ? t.admin.moduleDetail.mediaTypeDocument
+                        : t.admin.moduleDetail.mediaTypeImage;
+                  const fileName = getFileNameFromUrl(item.url);
+                  const langCaptions = fromLangs
+                    .map((lang) => ({
+                      lang,
+                      caption: media[lang]?.find((i) => i.id === item.id)?.caption ?? '',
+                    }))
+                    .filter(({ caption }) => caption.length > 0);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-3"
+                    >
+                      {langCaptions.length > 0 && (
+                        <div className="group relative shrink-0">
+                          <div className="flex h-5 w-5 cursor-default items-center justify-center rounded-full border border-slate-300 text-xs font-bold text-slate-400 transition hover:border-slate-500 hover:text-slate-600">
+                            i
+                          </div>
+                          <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden min-w-max rounded-xl border border-slate-200 bg-white p-3 shadow-lg group-hover:block">
+                            <div className="space-y-1">
+                              {langCaptions.map(({ lang, caption }) => (
+                                <p key={lang} className="text-xs text-slate-500">
+                                  <span className="font-semibold">{lang.toUpperCase()}:</span>{' '}
+                                  {caption}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-700">
+                          {typeLabel}
+                          <span className="font-normal text-slate-500"> – {fileName}</span>
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {t.admin.moduleDetail.mediaSyncConflictFoundIn}{' '}
+                          {fromLangs.map((l) => l.toUpperCase()).join(', ')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={added}
+                        onClick={() => {
+                          setPendingSyncEnable((prev) => {
+                            if (!prev) return prev;
+                            if (added) {
+                              return { ...prev, baseItems: prev.baseItems.filter((i) => i.id !== item.id) };
+                            }
+                            return { ...prev, baseItems: [...prev.baseItems, item] };
+                          });
+                        }}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${
+                          added ? 'bg-emerald-500' : 'bg-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                            added ? 'translate-x-[18px]' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+                {syncConflictUniqueMissing.every(({ item }) => syncConflictBaseIds.has(item.id)) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const uniqueIds = new Set(syncConflictUniqueMissing.map(({ item }) => item.id));
+                      setPendingSyncEnable((prev) =>
+                        prev ? { ...prev, baseItems: prev.baseItems.filter((i) => !uniqueIds.has(i.id)) } : prev,
+                      );
+                    }}
+                    className="w-full cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    {t.admin.moduleDetail.mediaSyncConflictRemoveAll(syncConflictUniqueMissing.length)}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const toAdd = syncConflictUniqueMissing
+                        .filter(({ item }) => !syncConflictBaseIds.has(item.id))
+                        .map(({ item }) => item);
+                      setPendingSyncEnable((prev) =>
+                        prev ? { ...prev, baseItems: [...prev.baseItems, ...toAdd] } : prev,
+                      );
+                    }}
+                    className="w-full cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    {t.admin.moduleDetail.mediaSyncConflictAddAll(
+                      syncConflictUniqueMissing.filter(({ item }) => !syncConflictBaseIds.has(item.id)).length,
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+            {syncConflictConsequences.length > 0 && (
+              <div className="mt-6 space-y-1.5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">
+                    {t.admin.moduleDetail.mediaSyncConflictConsequencesTitle}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {t.admin.moduleDetail.mediaSyncConflictConsequencesHint(activeLanguage.toUpperCase())}
+                  </p>
+                </div>
+                <div className="space-y-1 pt-1">
+                  {syncConflictConsequences.map(({ lang, willGain, willLose }) => {
+                    const label =
+                      willGain > 0 && willLose > 0
+                        ? t.admin.moduleDetail.mediaSyncConflictLangGainAndLose(lang.toUpperCase(), willGain, willLose)
+                        : willGain > 0
+                          ? t.admin.moduleDetail.mediaSyncConflictLangWillGain(lang.toUpperCase(), willGain)
+                          : t.admin.moduleDetail.mediaSyncConflictLangWillLose(lang.toUpperCase(), willLose);
+                    const isLosing = willLose > 0;
+                    return (
+                      <p
+                        key={lang}
+                        className={`text-xs font-medium ${isLosing ? 'text-amber-600' : 'text-emerald-600'}`}
+                      >
+                        {label}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <p className="mt-6 text-xs font-medium text-slate-600">
+              {t.admin.moduleDetail.mediaSyncConflictWillSync(pendingSyncEnable.baseItems.length)}
+            </p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(applySyncFromBase(pendingSyncEnable.baseItems, media));
+                  onMediaSyncChange(true);
+                  closeSyncConflictDialog();
+                }}
+                className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 text-left"
+              >
+                {t.admin.moduleDetail.mediaSyncConflictProceed(pendingSyncEnable.baseItems.length)}
+              </button>
+              <button
+                type="button"
+                onClick={closeSyncConflictDialog}
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 text-left"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-          {t.admin.moduleDetail.noMediaForLanguage}
+          <p>{t.admin.moduleDetail.noMediaForLanguage}</p>
+          {!mediaSync && langsWithMedia.length > 0 && (
+            <div className="mt-4 flex justify-center">
+              <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <SelectWithToggleIcon
+                  value={effectiveReuseSource}
+                  onChange={(e) => setReuseSourceLang(e.target.value)}
+                  className="cursor-pointer border-0 bg-transparent px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none"
+                >
+                  {langsWithMedia.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang.toUpperCase()} ({t.admin.moduleDetail.mediaReuseElements((media[lang] ?? []).length)})
+                    </option>
+                  ))}
+                </SelectWithToggleIcon>
+                <button
+                  type="button"
+                  onClick={() => handleReuse(false)}
+                  disabled={alreadyReused}
+                  className="cursor-pointer border-l border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {reuseButtonLabel}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <DndContext
@@ -1419,6 +1959,20 @@ const LocaleMediaEditor = ({
                   key={item.id}
                   item={item}
                   onRemove={() => handleRemove(item.id)}
+                  onCaptionChange={(caption) => {
+                    updateList(
+                      items.map((i) => {
+                        if (i.id !== item.id) return i;
+                        const next = { ...i };
+                        if (caption) {
+                          next.caption = caption;
+                        } else {
+                          delete next.caption;
+                        }
+                        return next;
+                      }),
+                    );
+                  }}
                   isTarget={overId === item.id && activeId !== null && activeId !== item.id}
                 />
               ))}
@@ -1429,31 +1983,86 @@ const LocaleMediaEditor = ({
           </DragOverlay>
         </DndContext>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => handleUploadClick('image')}
-          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={uploading === 'image'}
-        >
-          {uploading === 'image' ? t.common.uploading : t.admin.moduleDetail.uploadImage}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleUploadClick('video')}
-          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={uploading === 'video'}
-        >
-          {uploading === 'video' ? t.common.uploading : t.admin.moduleDetail.uploadVideo}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleUploadClick('document')}
-          className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={uploading === 'document'}
-        >
-          {uploading === 'document' ? t.common.uploading : t.admin.moduleDetail.uploadDocument}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handleUploadClick('image')}
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={uploading === 'image'}
+          >
+            {uploading === 'image' ? t.common.uploading : t.admin.moduleDetail.uploadImage}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleUploadClick('video')}
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={uploading === 'video'}
+          >
+            {uploading === 'video' ? t.common.uploading : t.admin.moduleDetail.uploadVideo}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleUploadClick('document')}
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={uploading === 'document'}
+          >
+            {uploading === 'document' ? t.common.uploading : t.admin.moduleDetail.uploadDocument}
+          </button>
+        </div>
+        <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {items.length > 0 && langsWithMedia.length > 0 && (
+            <div
+              className={`flex items-stretch overflow-hidden transition-all duration-300 ease-in-out ${
+                !mediaSync ? 'max-w-[480px] opacity-100' : 'max-w-0 opacity-0'
+              }`}
+            >
+              <SelectWithToggleIcon
+                value={effectiveReuseSource}
+                onChange={(e) => setReuseSourceLang(e.target.value)}
+                className="cursor-pointer border-0 bg-transparent px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none whitespace-nowrap"
+              >
+                {langsWithMedia.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang.toUpperCase()} ({t.admin.moduleDetail.mediaReuseElements((media[lang] ?? []).length)})
+                  </option>
+                ))}
+              </SelectWithToggleIcon>
+              <span className="w-px shrink-0 self-stretch bg-slate-200" />
+              <button
+                type="button"
+                onClick={() => handleReuse(true)}
+                disabled={alreadyReused}
+                className="cursor-pointer whitespace-nowrap px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {reuseButtonLabel}
+              </button>
+              <span className="w-px shrink-0 self-stretch bg-slate-200" />
+            </div>
+          )}
+          <label className="flex cursor-pointer items-center gap-2 px-3 py-2">
+            <span className="whitespace-nowrap text-sm font-semibold text-slate-700">
+              {mediaSync
+                ? t.admin.moduleDetail.mediaSyncLabelOn
+                : t.admin.moduleDetail.mediaSyncLabelOff}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={mediaSync}
+              onClick={handleSyncToggle}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${
+                mediaSync ? 'bg-slate-900' : 'bg-slate-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                  mediaSync ? 'translate-x-[18px]' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </label>
+        </div>
       </div>
       <input
         ref={imageInputRef}

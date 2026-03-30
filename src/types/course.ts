@@ -11,6 +11,7 @@ export interface ModuleMediaItem {
   id: string;
   url: string;
   type: ModuleMediaType;
+  caption?: string;
 }
 
 export type LocaleModuleMediaMap = Record<string, ModuleMediaItem[]>;
@@ -60,6 +61,7 @@ export interface CourseModule {
   languages?: string[];
   moduleType?: CourseModuleType;
   examPassPercentage?: number;
+  mediaSync?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

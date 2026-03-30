@@ -160,17 +160,21 @@ export default function ConsumerModuleView({
   const localizedMedia = getLocalizedMediaItems(module.media, locale);
   const fallbackImages = getLocalizedList(module.imageUrls, locale);
   const fallbackVideos = getLocalizedList(module.videoUrls, locale);
-  const mediaItems = useMemo(
-    () =>
-      localizedMedia.length
-        ? localizedMedia.map((item) => ({
-            url: item.url,
-            type: item.type as MediaPreviewType,
-          }))
-        : [
-            ...fallbackImages.map((url) => ({ url, type: 'image' as const })),
-            ...fallbackVideos.map((url) => ({ url, type: 'video' as const })),
-          ],
+  type MediaListItem = { url: string; type: MediaPreviewType; caption?: string };
+  const mediaItems = useMemo<MediaListItem[]>(
+    () => {
+      if (localizedMedia.length) {
+        return localizedMedia.map((item): MediaListItem => ({
+          url: item.url,
+          type: item.type as MediaPreviewType,
+          caption: item.caption,
+        }));
+      }
+      return [
+        ...fallbackImages.map((url): MediaListItem => ({ url, type: 'image' })),
+        ...fallbackVideos.map((url): MediaListItem => ({ url, type: 'video' })),
+      ];
+    },
     [localizedMedia, fallbackImages, fallbackVideos],
   );
   const moduleTitle = getLocalizedValue(module.title, locale) || t.modules.module;
@@ -212,7 +216,7 @@ export default function ConsumerModuleView({
   const [showCourseComplete, setShowCourseComplete] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: MediaPreviewType } | null>(
+  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: MediaPreviewType; caption?: string } | null>(
     null,
   );
   const [previewImgError, setPreviewImgError] = useState(false);
@@ -507,55 +511,62 @@ export default function ConsumerModuleView({
                 {t.modules.mediaGallery}
               </p>
               <div className="flex gap-4 overflow-x-auto pb-2">
-                {mediaItems.map(({ url, type }) => {
+                {mediaItems.map(({ url, type, caption }) => {
                   const isVideo = type === 'video';
                   const isDocument = type === 'document';
                   return (
                     <button
                       key={url}
                       type="button"
-                      onClick={() => setMediaPreview({ url, type })}
-                      className="relative h-[165px] w-[165px] flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-slate-300"
+                      onClick={() => setMediaPreview({ url, type, caption })}
+                      className="flex flex-col shrink-0 w-[165px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-slate-300"
                     >
-                      {isVideo ? (
-                        <>
-                          {isYouTubeUrl(url) ? (
-                            <iframe
-                              src={`${url}${url.includes('?') ? '&' : '?'}controls=0&modestbranding=1&playsinline=1&rel=0`}
-                              title="Modulvideo"
-                              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              className="h-full w-full pointer-events-none"
-                            />
-                          ) : (
-                            <video
-                              className="h-full w-full bg-black object-cover"
-                              muted
-                              playsInline
-                              preload="metadata"
-                              controls={false}
-                            >
-                              <source src={url} />
-                              {t.modules.videoNotSupported}
-                            </video>
-                          )}
-                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
-                            <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-slate-900 shadow">
-                              ▶
+                      <div className="relative h-[165px] w-full shrink-0 overflow-hidden bg-slate-100">
+                        {isVideo ? (
+                          <>
+                            {isYouTubeUrl(url) ? (
+                              <iframe
+                                src={`${url}${url.includes('?') ? '&' : '?'}controls=0&modestbranding=1&playsinline=1&rel=0`}
+                                title="Modulvideo"
+                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="h-full w-full pointer-events-none"
+                              />
+                            ) : (
+                              <video
+                                className="h-full w-full bg-black object-cover"
+                                muted
+                                playsInline
+                                preload="metadata"
+                                controls={false}
+                              >
+                                <source src={url} />
+                                {t.modules.videoNotSupported}
+                              </video>
+                            )}
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
+                              <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-slate-900 shadow">
+                                ▶
+                              </span>
+                            </div>
+                          </>
+                        ) : isDocument ? (
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-slate-700">
+                            <span className="text-4xl" role="img" aria-label="PDF">
+                              📄
+                            </span>
+                            <span className="text-xs font-semibold line-clamp-3 break-words">
+                              {getFileNameFromUrl(url)}
                             </span>
                           </div>
-                        </>
-                      ) : isDocument ? (
-                        <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-slate-700">
-                          <span className="text-4xl" role="img" aria-label="PDF">
-                            📄
-                          </span>
-                          <span className="text-xs font-semibold line-clamp-3 break-words">
-                            {getFileNameFromUrl(url)}
-                          </span>
+                        ) : (
+                          <MediaImage src={url} alt="Modulbilde" className="h-full w-full object-contain" />
+                        )}
+                      </div>
+                      {caption && (
+                        <div className="w-full bg-slate-50 border-t border-slate-200 px-2 py-1.5 text-left text-xs text-slate-600 leading-snug">
+                          {caption}
                         </div>
-                      ) : (
-                        <MediaImage src={url} alt="Modulbilde" className="h-full w-full object-contain" />
                       )}
                     </button>
                   );
@@ -786,47 +797,54 @@ export default function ConsumerModuleView({
                     ✕
                   </button>
                   {mediaPreview && (
-                    <div className="flex w-full items-center justify-center overflow-hidden bg-slate-100">
-                      {mediaPreview.type === 'video' ? (
-                        isYouTubeUrl(mediaPreview.url) ? (
+                    <>
+                      <div className="flex w-full items-center justify-center overflow-hidden bg-slate-100">
+                        {mediaPreview.type === 'video' ? (
+                          isYouTubeUrl(mediaPreview.url) ? (
+                            <iframe
+                              src={mediaPreview.url}
+                              title="Modulmedia"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="h-[80vh] w-full"
+                            />
+                          ) : (
+                            <video controls className="h-[80vh] w-full object-contain bg-black">
+                              <source src={mediaPreview.url} />
+                              {t.modules.videoNotSupported}
+                            </video>
+                          )
+                        ) : mediaPreview.type === 'document' ? (
                           <iframe
                             src={mediaPreview.url}
-                            title="Modulmedia"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="h-[80vh] w-full"
+                            title="Moduldokument"
+                            className="h-[80vh] w-full bg-white"
                           />
+                        ) : previewImgError ? (
+                          <div className="flex flex-col items-center justify-center gap-3 p-16 text-slate-400">
+                            <span className="text-5xl" role="img" aria-label="Bildet mangler">🖼️</span>
+                            <p className="text-sm font-semibold">Bildet er ikke å finne</p>
+                          </div>
                         ) : (
-                          <video controls className="h-[80vh] w-full object-contain bg-black">
-                            <source src={mediaPreview.url} />
-                            {t.modules.videoNotSupported}
-                          </video>
-                        )
-                      ) : mediaPreview.type === 'document' ? (
-                        <iframe
-                          src={mediaPreview.url}
-                          title="Moduldokument"
-                          className="h-[80vh] w-full bg-white"
-                        />
-                      ) : previewImgError ? (
-                        <div className="flex flex-col items-center justify-center gap-3 p-16 text-slate-400">
-                          <span className="text-5xl" role="img" aria-label="Bildet mangler">🖼️</span>
-                          <p className="text-sm font-semibold">Bildet er ikke å finne</p>
+                          <Image
+                            src={mediaPreview.url}
+                            alt="Modulbilde"
+                            width={0}
+                            height={0}
+                            sizes="100vw"
+                            unoptimized
+                            className="block object-contain"
+                            style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '85vh' }}
+                            onError={() => setPreviewImgError(true)}
+                          />
+                        )}
+                      </div>
+                      {mediaPreview.caption && (
+                        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-sm text-slate-700">
+                          {mediaPreview.caption}
                         </div>
-                      ) : (
-                        <Image
-                          src={mediaPreview.url}
-                          alt="Modulbilde"
-                          width={0}
-                          height={0}
-                          sizes="100vw"
-                          unoptimized
-                          className="block object-contain"
-                          style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '85vh' }}
-                          onError={() => setPreviewImgError(true)}
-                        />
                       )}
-                    </div>
+                    </>
                   )}
                 </Dialog.Panel>
               </Transition.Child>

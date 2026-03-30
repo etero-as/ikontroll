@@ -149,6 +149,7 @@ export const useCourseModule = (
             languages: normalizeLanguages(data.languages),
             moduleType,
             examPassPercentage,
+            mediaSync: typeof data.mediaSync === 'boolean' ? data.mediaSync : undefined,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,
           });

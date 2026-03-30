@@ -177,7 +177,8 @@ export default function ModulePreviewPage({
   const localizedMedia = getLocalizedMediaItems(module?.media, locale);
   const images = getLocalizedList(module?.imageUrls, locale);
   const videos = getLocalizedList(module?.videoUrls, locale);
-  const mediaItems = localizedMedia.length
+  type PreviewMediaItem = { id: string; url: string; type: 'image' | 'video' | 'document'; caption?: string };
+  const mediaItems: PreviewMediaItem[] = localizedMedia.length
     ? localizedMedia
     : [
         ...images.map((url) => ({ id: url, url, type: 'image' as const })),
@@ -330,9 +331,16 @@ export default function ModulePreviewPage({
                 return (
                   <div
                     key={item.id}
-                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 h-64"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
                   >
-                    <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                    <div className="relative h-56 shrink-0 overflow-hidden bg-slate-100">
+                      <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                    </div>
+                    {item.caption && (
+                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                        {item.caption}
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -341,21 +349,28 @@ export default function ModulePreviewPage({
                 return (
                   <div
                     key={item.id}
-                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-black"
+                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
                   >
-                    {isYouTubeUrl(item.url) ? (
-                      <iframe
-                        src={item.url}
-                        title="Modulvideo"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="aspect-video w-full"
-                      />
-                    ) : (
-                      <video controls className="aspect-video w-full">
-                        <source src={item.url} />
-                        Nettleseren din støtter ikke video.
-                      </video>
+                    <div className="h-56 shrink-0 bg-black flex items-center justify-center">
+                      {isYouTubeUrl(item.url) ? (
+                        <iframe
+                          src={item.url}
+                          title="Modulvideo"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      ) : (
+                        <video controls className="h-full w-full object-contain">
+                          <source src={item.url} />
+                          Nettleseren din støtter ikke video.
+                        </video>
+                      )}
+                    </div>
+                    {item.caption && (
+                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                        {item.caption}
+                      </div>
                     )}
                   </div>
                 );
@@ -364,21 +379,28 @@ export default function ModulePreviewPage({
               return (
                 <div
                   key={item.id}
-                  className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-center"
+                  className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
                 >
-                  <span className="text-4xl" role="img" aria-label="PDF">
-                    📄
-                  </span>
-                  <p className="text-xs font-semibold text-slate-700 break-all">
-                    {getFileNameFromUrl(item.url)}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    Åpne PDF
-                  </button>
+                  <div className="h-56 shrink-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-4 text-center">
+                    <span className="text-4xl" role="img" aria-label="PDF">
+                      📄
+                    </span>
+                    <p className="text-xs font-semibold text-slate-700 break-all">
+                      {getFileNameFromUrl(item.url)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Åpne PDF
+                    </button>
+                  </div>
+                  {item.caption && (
+                    <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                      {item.caption}
+                    </div>
+                  )}
                 </div>
               );
             })}
