@@ -343,7 +343,8 @@ export default function ModulePreviewPage({
   const localizedMedia = getLocalizedMediaItems(module?.media, locale);
   const images = getLocalizedList(module?.imageUrls, locale);
   const videos = getLocalizedList(module?.videoUrls, locale);
-  const mediaItems = localizedMedia.length
+  type PreviewMediaItem = { id: string; url: string; type: 'image' | 'video' | 'document'; caption?: string };
+  const mediaItems: PreviewMediaItem[] = localizedMedia.length
     ? localizedMedia
     : [
         ...images.map((url) => ({ id: url, url, type: 'image' as const })),
@@ -720,126 +721,87 @@ export default function ModulePreviewPage({
             <p className="mt-4 text-base text-slate-600">{summary}</p>
           )}
         </div>
+      </header>
 
-        {bodyHtml && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-            <h2 className="text-xl font-semibold text-slate-900">
-              {L.content}
-            </h2>
-            <div
-              className="prose prose-slate mt-4 max-w-none"
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
-          </section>
-        )}
-
-        {questions.length > 0 && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900">
-                {L.quizHeading}
-              </h2>
-              <span className="text-sm text-slate-500">
-                {showSummary
-                  ? L.summary
-                  : L.questionCounter(currentIndex + 1, questions.length)}
-              </span>
-            </div>
-
-            {showSummary ? (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
-                  <p>
-                    {L.scoreText(
-                      questions.length - incorrectQuestions.length,
-                      questions.length,
-                      scorePercentage,
+      {mediaItems.length > 0 && (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+          <h2 className="text-xl font-semibold text-slate-900">Mediegalleri</h2>
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
+            {mediaItems.map((item) => {
+              if (item.type === 'image') {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                  >
+                    <div className="relative h-56 shrink-0 overflow-hidden bg-slate-100">
+                      <PreviewMediaImage src={item.url} alt="Modulbilde" className="h-full w-full object-contain" />
+                    </div>
+                    {item.caption && (
+                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                        {item.caption}
+                      </div>
                     )}
-                  </p>
-                  {isExamModule && (
-                    <p className="mt-2 text-sm font-semibold">
-                      {hasPassed
-                        ? L.examPassed
-                        : L.examFailed(requiredPercentage)}
+                  </div>
+                );
+              }
+
+              if (item.type === 'video') {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                  >
+                    <div className="h-56 shrink-0 bg-black flex items-center justify-center">
+                      {isYouTubeUrl(item.url) ? (
+                        <iframe
+                          src={item.url}
+                          title="Modulvideo"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      ) : (
+                        <video controls className="h-full w-full object-contain">
+                          <source src={item.url} />
+                          Nettleseren din støtter ikke video.
+                        </video>
+                      )}
+                    </div>
+                    {item.caption && (
+                      <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                        {item.caption}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                >
+                  <div className="h-56 shrink-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-4 text-center">
+                    <span className="text-4xl" role="img" aria-label="PDF">
+                      📄
+                    </span>
+                    <p className="text-xs font-semibold text-slate-700 break-all">
+                      {getFileNameFromUrl(item.url)}
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Åpne PDF
+                    </button>
+                  </div>
+                  {item.caption && (
+                    <div className="flex-1 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700">
+                      {item.caption}
+                    </div>
                   )}
-                </div>
-                {incorrectQuestions.length > 0 ? (
-                  <div className="space-y-4">
-                    <p className="text-sm font-semibold text-slate-700">
-                      {L.reviewPrompt}
-                    </p>
-                    {incorrectQuestions.map((question) => {
-                      const questionText = getLocalizedValue(
-                        question.contentText,
-                        locale,
-                      );
-                      const correctIds = getCorrectAnswerIds(question);
-                      const correctAlts = question.alternatives.filter((a) =>
-                        correctIds.includes(a.id),
-                      );
-                      const selectedIds = answers[question.id] ?? [];
-                      const userAlts = question.alternatives.filter((a) =>
-                        selectedIds.includes(a.id),
-                      );
-                      const userAnswerText = userAlts.length
-                        ? userAlts
-                            .map((a) =>
-                              getAlternativeLabel(
-                                a,
-                                locale,
-                                L.alternativeFallback,
-                              ),
-                            )
-                            .join(', ')
-                        : '—';
-                      const correctAnswerText = correctAlts
-                        .map((a) =>
-                          getAlternativeLabel(a, locale, L.alternativeFallback),
-                        )
-                        .join(', ');
-                      return (
-                        <div
-                          key={question.id}
-                          className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4"
-                        >
-                          <p className="text-sm font-semibold text-red-700">
-                            {questionText || L.questionFallback}
-                          </p>
-                          <p className="mt-2 text-sm text-red-600">
-                            {L.yourAnswer} {userAnswerText}
-                          </p>
-                          {correctAnswerText && (
-                            <p className="text-sm text-slate-600">
-                              {L.correctAnswer} {correctAnswerText}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-                    {L.allCorrect}
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={resetQuiz}
-                    className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    {L.retakeQuiz}
-                  </button>
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/courses/${courseId}/preview?lang=${locale}`,
-                      )
-                    }
-                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    {L.backToOverview}
-                  </button>
                 </div>
               </div>
             ) : currentQuestion ? (
