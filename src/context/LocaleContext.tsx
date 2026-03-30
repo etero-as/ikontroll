@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 import { getPreferredLocale, getSavedLocale, saveLocale } from '@/utils/localization';
 
@@ -21,10 +21,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(getPreferredLocale(['no', 'en'], getSavedLocale()));
   }, []);
 
-  const setLocale = (next: string) => {
+  const setLocale = useCallback((next: string) => {
     saveLocale(next);
     setLocaleState(next);
-  };
+  }, []);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale }}>

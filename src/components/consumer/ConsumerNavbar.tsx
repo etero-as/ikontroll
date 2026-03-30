@@ -3,12 +3,15 @@
 import { GraduationCap, LogOut, Menu, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getTranslation } from '@/utils/translations';
+
+type MenuPosition = { top: number; right: number };
 
 const ConsumerNavbar = () => {
   const {
@@ -20,6 +23,9 @@ const ConsumerNavbar = () => {
   } = useAuth();
   const { locale, setLocale } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const [avatarMenuPosition, setAvatarMenuPosition] = useState<MenuPosition | null>(null);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -35,10 +41,95 @@ const ConsumerNavbar = () => {
     router.push('/dashboard');
   };
 
+  const toggleAvatarMenu = () => {
+    if (isAvatarMenuOpen) {
+      setIsAvatarMenuOpen(false);
+      setAvatarMenuPosition(null);
+      return;
+    }
+    const rect = avatarButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setAvatarMenuPosition({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    setIsAvatarMenuOpen(true);
+  };
+
+  const closeAvatarMenu = () => {
+    setIsAvatarMenuOpen(false);
+    setAvatarMenuPosition(null);
+  };
+
+  const handleLogout = async () => {
+    closeAvatarMenu();
+    await logout();
+  };
+
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      if (!isAvatarMenuOpen) return;
+      if (avatarButtonRef.current?.contains(event.target as Node)) return;
+      const menu = document.getElementById('consumer-user-menu');
+      if (menu?.contains(event.target as Node)) return;
+      closeAvatarMenu();
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeAvatarMenu();
+    };
+    document.addEventListener('mousedown', handleGlobalClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleGlobalClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isAvatarMenuOpen]);
+
+  const initials = profile
+    ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.trim().toUpperCase() || '?'
+    : '?';
+
+  const avatarMenu =
+    isAvatarMenuOpen && avatarMenuPosition && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            id="consumer-user-menu"
+            style={{ top: avatarMenuPosition.top, right: avatarMenuPosition.right }}
+            className="fixed z-50 w-60 rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="border-b border-slate-100 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-900">
+                {profile?.firstName} {profile?.lastName}
+              </p>
+              <p className="text-xs text-slate-500">{profile?.email}</p>
+            </div>
+            <Link
+              href="/profile"
+              onClick={closeAvatarMenu}
+              className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.common.myProfile}
+            </Link>
+            {canSwitchToAdmin && (
+              <button
+                onClick={() => { handleSwitchToAdmin(); closeAvatarMenu(); }}
+                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Adminvisning
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.common.logout}
+            </button>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <>
-      {/* Desktop/Tablet Top Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
+      {avatarMenu}
+      <header className="sticky top-0 z-40 flex min-h-16 items-center border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-8">
             <Link href="/my-courses" className="text-xl font-bold text-slate-900">
@@ -70,40 +161,20 @@ const ConsumerNavbar = () => {
 
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-3 md:flex">
-              <div className="text-right text-xs">
-                <p className="font-semibold text-slate-900">
-                  {profile?.firstName} {profile?.lastName}
-                </p>
-                <p className="text-slate-500">{profile?.email}</p>
-              </div>
-              {canSwitchToAdmin && (
-                <button
-                  onClick={handleSwitchToAdmin}
-                  className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Adminvisning
-                </button>
-              )}
               <LanguageSwitcher locale={locale} onChange={setLocale} />
-              <Link
-                href="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
-              >
-                {profile?.firstName?.[0]}
-                {profile?.lastName?.[0]}
-              </Link>
               <button
-                onClick={logout}
-                className="ml-2 rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                aria-label={t.common.logout}
+                ref={avatarButtonRef}
+                onClick={toggleAvatarMenu}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
+                aria-haspopup="menu"
+                aria-expanded={isAvatarMenuOpen}
               >
-                <LogOut size={18} />
+                {initials}
               </button>
             </div>
 
-            {/* Mobile Menu Button (Drawer trigger for Logout) - Hidden on mobile since we have bottom nav */}
             <button
-              className="hidden" 
+              className="hidden"
               onClick={toggleMenu}
               aria-label={t.common.menu}
             >
@@ -113,7 +184,6 @@ const ConsumerNavbar = () => {
         </div>
       </header>
 
-      {/* Mobile Slide-out Menu (Drawer - Right side) */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-50 flex justify-end md:hidden">
           <div
@@ -145,9 +215,8 @@ const ConsumerNavbar = () => {
                         Gå til admin
                       </button>
                     )}
-                {/* Drawer content can be expanded here if needed */}
             </div>
-            
+
             <button
               onClick={logout}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
@@ -159,7 +228,6 @@ const ConsumerNavbar = () => {
         </div>
       )}
 
-      {/* Mobile Bottom Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white pb-safe md:hidden">
         <div className="grid grid-cols-3 h-16">
           <Link

@@ -78,12 +78,16 @@ export default function ConsumerLayout({
     return null;
   }
 
+  const isModulePage = /\/my-courses\/[^/]+\/modules\/[^/]+/.test(pathname ?? '');
+
   return (
     <LocaleProvider>
       <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
         <PortalModePrompt />
         <ConsumerNavbar />
-        <main className="mx-auto max-w-5xl p-4 md:p-8">{children}</main>
+        <main className={isModulePage ? '' : 'mx-auto max-w-5xl p-4 md:p-8'}>
+          {children}
+        </main>
       </div>
     </LocaleProvider>
   );

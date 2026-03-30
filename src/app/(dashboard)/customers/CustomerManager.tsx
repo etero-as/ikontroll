@@ -632,7 +632,7 @@ export default function CustomerManager() {
                   <th className="pb-2">{t.admin.customers.contact}</th>
                   <th className="pb-2">{t.admin.customers.status}</th>
                   <th className="pb-2">{t.admin.customers.orgNumber}</th>
-                  <th className="pb-2 text-right">{t.admin.customers.actions}</th>
+                  <th className="pb-2 text-right"></th>
                 </tr>
               </thead>
               <tbody>{tableRows}</tbody>

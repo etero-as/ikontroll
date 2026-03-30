@@ -846,8 +846,13 @@ const QuillEditor = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
   const lastHtmlRef = useRef<string>(value ?? '');
+  const onChangeRef = useRef(onChange);
   const [showTableActions, setShowTableActions] = useState(false);
   const [tableActionsHost, setTableActionsHost] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
   type TableAction =
     | 'insertRowAbove'
     | 'insertRowBelow'
@@ -887,7 +892,7 @@ const QuillEditor = ({
       const html = quill.root.innerHTML;
       if (html !== lastHtmlRef.current) {
         lastHtmlRef.current = html;
-        onChange(html);
+        onChangeRef.current(html);
       }
       updateTableActions(quill.getSelection());
     });
