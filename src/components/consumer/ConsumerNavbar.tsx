@@ -110,14 +110,14 @@ const ConsumerNavbar = () => {
             {canSwitchToAdmin && (
               <button
                 onClick={() => { handleSwitchToAdmin(); closeAvatarMenu(); }}
-                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Adminvisning
               </button>
             )}
             <button
               onClick={handleLogout}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               {t.common.logout}
             </button>
@@ -138,30 +138,20 @@ const ConsumerNavbar = () => {
             <nav className="hidden md:flex md:gap-6">
               <Link
                 href="/my-courses"
-                className={`text-sm font-medium transition ${
+                className={`border-b-2 pb-0.5 text-sm font-medium transition ${
                   isActive('/my-courses')
-                    ? 'text-slate-900'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'border-slate-900 text-slate-900'
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
                 }`}
               >
                 {t.common.myCourses}
-              </Link>
-              <Link
-                href="/profile"
-                className={`text-sm font-medium transition ${
-                  isActive('/profile')
-                    ? 'text-slate-900'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {t.common.myProfile}
               </Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-3 md:flex">
-              <LanguageSwitcher locale={locale} onChange={setLocale} />
+.              <LanguageSwitcher locale={locale} onChange={setLocale} />
               <button
                 ref={avatarButtonRef}
                 onClick={toggleAvatarMenu}

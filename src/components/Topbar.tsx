@@ -133,7 +133,7 @@ export function Topbar() {
             )}
             <button
               onClick={handleLogout}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               {t.admin.topbar.logout}
             </button>
@@ -146,9 +146,9 @@ export function Topbar() {
     <>
       <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
         <div className="flex items-center gap-4">
-          <span className="text-lg font-semibold tracking-wide text-slate-900">
+          <Link href="/dashboard" className="text-xl font-bold text-slate-900">
             IKontroll
-          </span>
+          </Link>
           {isCustomerAdmin && customerMemberships.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <span>|</span>
@@ -168,7 +168,7 @@ export function Topbar() {
           <button
             ref={buttonRef}
             onClick={toggleMenu}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800"
             aria-haspopup="menu"
             aria-expanded={open}
           >
