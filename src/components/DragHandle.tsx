@@ -15,6 +15,7 @@ export default function DragHandle({
   return (
     <button
       type="button"
+      data-drag-handle
       {...attributes}
       {...(listeners ?? {})}
       style={{
@@ -22,9 +23,8 @@ export default function DragHandle({
         transitionProperty: 'none',
         transitionDuration: '0s',
         transitionTimingFunction: 'linear',
-        cursor: 'grab',
       }}
-      className={`inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:border-black hover:bg-slate-50 hover:text-slate-600 active:cursor-grabbing${className ? ` ${className}` : ''}`}
+      className={`inline-flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:border-black hover:bg-slate-50 hover:text-slate-600${className ? ` ${className}` : ''}`}
       aria-label="Endre rekkefølge"
       title="Endre rekkefølge"
     >

@@ -24,6 +24,27 @@ body {
   textarea {
     font: inherit;
   }
+
+  button:not(:disabled):not([data-drag-handle]),
+  a,
+  select,
+  label[for],
+  [role="button"]:not([data-drag-handle]),
+  [role="link"],
+  [role="option"],
+  [role="menuitem"] {
+    cursor: pointer;
+  }
+
+  [data-drag-handle],
+  button[data-drag-handle] {
+    cursor: grab;
+  }
+
+  [data-drag-handle]:active,
+  button[data-drag-handle]:active {
+    cursor: grabbing;
+  }
 }
 
 /* Quill alignment helpers for rendering rich text */

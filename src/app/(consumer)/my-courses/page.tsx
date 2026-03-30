@@ -176,7 +176,7 @@ export default function MyCoursesPage() {
             <button
               type="submit"
               disabled={redeeming || !courseCode.trim()}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {redeeming ? t.courses.addingCourse : t.courses.addCourse}
             </button>
@@ -240,7 +240,7 @@ function ConsumerCourseCard({ course, locale }: { course: Course; locale: string
   return (
     <Link
       href={`/my-courses/${course.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
     >
       <div className="relative h-48 bg-slate-100 overflow-hidden">
         {course.courseImageUrl && !imageError ? (
