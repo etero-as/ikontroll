@@ -25,11 +25,15 @@ const normalizeMediaItem = (item: unknown): ModuleMediaItem | null => {
     const maybe = item as Partial<ModuleMediaItem> & { url?: unknown; type?: unknown; id?: unknown };
     if (typeof maybe.url === 'string' && maybe.url.trim().length > 0) {
       const normalizedType = coerceMediaType(maybe.type as ModuleMediaItem['type'] | undefined);
-      return {
+      const normalized: ModuleMediaItem = {
         id: typeof maybe.id === 'string' && maybe.id.trim().length > 0 ? maybe.id : randomId(),
         url: maybe.url,
         type: normalizedType,
       };
+      if (typeof maybe.caption === 'string' && maybe.caption.length > 0) {
+        normalized.caption = maybe.caption;
+      }
+      return normalized;
     }
   }
   return null;
@@ -82,11 +86,17 @@ export const ensureMediaLocales = (
 ): LocaleModuleMediaMap => {
   const base: LocaleModuleMediaMap = {};
   languages.forEach((lang) => {
-    base[lang] = media?.[lang]?.map((item) => ({
-      id: item.id ?? randomId(),
-      url: item.url,
-      type: coerceMediaType(item.type),
-    })) ?? [];
+    base[lang] = media?.[lang]?.map((item) => {
+      const normalized: ModuleMediaItem = {
+        id: item.id ?? randomId(),
+        url: item.url,
+        type: coerceMediaType(item.type),
+      };
+      if (item.caption) {
+        normalized.caption = item.caption;
+      }
+      return normalized;
+    }) ?? [];
   });
   return base;
 };
