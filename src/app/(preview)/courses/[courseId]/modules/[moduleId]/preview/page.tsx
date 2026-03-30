@@ -534,7 +534,7 @@ export default function ModulePreviewPage({
             onClick={() =>
               router.push(`/courses/${courseId}/preview?lang=${locale}`)
             }
-            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            className="flex cursor-pointer items-center gap-1 rounded-xl px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
           >
             ← {LNav.backToCourse}
           </button>

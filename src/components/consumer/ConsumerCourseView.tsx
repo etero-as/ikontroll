@@ -256,7 +256,7 @@ export default function ConsumerCourseView({
                 key={module.id}
                 type="button"
                 onClick={() => handleOpenModule(module.id)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {t.modules.module} {index + 1}

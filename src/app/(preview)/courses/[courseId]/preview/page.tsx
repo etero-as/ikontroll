@@ -1,12 +1,11 @@
 'use client';
 
-import { use, useCallback, useEffect, useMemo } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
-import { useCourseProgress } from '@/hooks/useCourseProgress';
 import type { LocaleStringArrayMap, LocaleStringMap } from '@/types/course';
 import { getLocalizedMediaItems } from '@/utils/media';
 import { useLocale } from '@/context/LocaleContext';
@@ -261,7 +260,29 @@ export default function CoursePreviewPage({
 
   const description = getLocalizedValue(course?.description, locale);
   const updatedAt = course?.updatedAt ?? course?.createdAt;
-  const { completedModules, loading: progressLoading } = useCourseProgress(courseId);
+  const [completedModules, setCompletedModules] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const hasSession = sessionStorage.getItem(`preview-session-${courseId}`);
+      if (!hasSession) return [];
+      const raw = sessionStorage.getItem(`preview-completed-${courseId}`);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const hasSession = sessionStorage.getItem(`preview-session-${courseId}`);
+      if (!hasSession) {
+        sessionStorage.removeItem(`preview-completed-${courseId}`);
+        sessionStorage.removeItem(`preview-progress-${courseId}`);
+        sessionStorage.setItem(`preview-session-${courseId}`, '1');
+        setCompletedModules([]);
+      }
+    } catch {}
+  }, [courseId]);
   const totalModules = sortedModules.length;
   const completedCount = sortedModules.filter((module) =>
     completedModules.includes(module.id),
@@ -269,9 +290,7 @@ export default function CoursePreviewPage({
   const courseProgressPercent = totalModules
     ? Math.round((completedCount / totalModules) * 100)
     : 0;
-  const progressSummary = progressLoading
-    ? '…'
-    : getCourseProgressSummary(locale, completedCount, totalModules);
+  const progressSummary = getCourseProgressSummary(locale, completedCount, totalModules);
 
   const nextModuleId = useMemo(() => {
     if (!sortedModules.length) return null;
@@ -350,7 +369,7 @@ export default function CoursePreviewPage({
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
             <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
               <span>{getCourseProgressLabel(locale)}</span>
-              <span>{progressLoading ? '…' : `${courseProgressPercent}%`}</span>
+              <span>{`${courseProgressPercent}%`}</span>
             </div>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
@@ -380,7 +399,7 @@ export default function CoursePreviewPage({
                 key={module.id}
                 type="button"
                 onClick={() => handleOpenModule(module.id)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left shadow-sm transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300"
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {coursePageLabels.moduleLabel(index)}
