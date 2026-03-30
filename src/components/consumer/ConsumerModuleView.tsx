@@ -128,7 +128,11 @@ export default function ConsumerModuleView({
   const { firebaseUser } = useAuth();
   const { locale: preferredLocale, setLocale } = useLocale();
   const { completedModules, setModuleCompletion, moduleAnsweredCounts, moduleAnswers, saveModuleAnswers, loading: progressLoading } = useCourseProgress(course.id);
-  const { modules } = useCourseModules(course.id);
+  const { modules: allModules } = useCourseModules(course.id);
+  const modules = useMemo(
+    () => allModules.filter((m) => (m.status ?? 'active') === 'active'),
+    [allModules],
+  );
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
@@ -573,10 +577,10 @@ export default function ConsumerModuleView({
           <div className="relative" ref={moduleDropdownRef}>
             <button
               onClick={() => setModuleDropdownOpen((p) => !p)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="flex max-w-55 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              {t.modules.allModules}
-              <ChevronDown size={14} />
+              <span className="truncate">{moduleTitle}</span>
+              <ChevronDown size={14} className="shrink-0" />
             </button>
             {moduleDropdownOpen && (
               <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">

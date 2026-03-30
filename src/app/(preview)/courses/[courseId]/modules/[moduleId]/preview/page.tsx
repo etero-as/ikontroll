@@ -276,7 +276,11 @@ export default function ModulePreviewPage({
 
   const { course } = useCourse(courseId);
   const { module, loading, error } = useCourseModule(courseId, moduleId);
-  const { modules } = useCourseModules(courseId);
+  const { modules: allModules } = useCourseModules(courseId);
+  const modules = useMemo(
+    () => allModules.filter((m) => (m.status ?? 'active') === 'active'),
+    [allModules],
+  );
 
   const completedSessionKey = `preview-completed-${courseId}`;
 
@@ -556,10 +560,10 @@ export default function ModulePreviewPage({
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen((p) => !p)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="flex max-w-55 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              {LNav.allModules}
-              <ChevronDown size={14} />
+              <span className="truncate">{moduleTitle}</span>
+              <ChevronDown size={14} className="shrink-0" />
             </button>
             {dropdownOpen && (
               <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">

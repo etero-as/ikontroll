@@ -53,6 +53,9 @@ const normalizeLocaleArrayMap = (value: unknown): LocaleStringArrayMap => {
 const normalizeModuleType = (value: unknown): CourseModuleType =>
   value === 'exam' ? 'exam' : 'normal';
 
+const normalizeModuleStatus = (value: unknown): 'active' | 'inactive' =>
+  value === 'inactive' ? 'inactive' : 'active';
+
 const normalizeLanguages = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
@@ -133,6 +136,7 @@ export const useCourseModule = (
             typeof data.examPassPercentage === 'number'
               ? data.examPassPercentage
               : undefined;
+          const status = normalizeModuleStatus(data.status);
           setModule({
             id: snapshot.id,
             courseId,
@@ -150,6 +154,7 @@ export const useCourseModule = (
             moduleType,
             examPassPercentage,
             mediaSync: typeof data.mediaSync === 'boolean' ? data.mediaSync : undefined,
+            status,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,
           });

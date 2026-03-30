@@ -10,7 +10,6 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { Controller, useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
@@ -45,10 +44,10 @@ import { useLocale } from '@/context/LocaleContext';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourses } from '@/hooks/useCourses';
+import { useCourseEditBarSetter } from '@/context/AdminBarContext';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DuplicateButton from '@/components/DuplicateButton';
 import DragHandle from '@/components/DragHandle';
-import SelectWithToggleIcon from '@/components/SelectWithToggleIcon';
 import CourseExpirationFields from '@/components/course/CourseExpirationFields';
 import { db, storage } from '@/lib/firebase';
 import { getTranslation } from '@/utils/translations';
@@ -133,18 +132,21 @@ const SortableModuleItem = ({
   onOpen,
   onDelete,
   onDuplicate,
+  onToggleStatus,
 }: {
   module: CourseModule;
   activeLanguage: string;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (module: CourseModule) => void;
+  onToggleStatus: (id: string) => void;
 }) => {
   const { locale } = useLocale();
   const t = getTranslation(locale);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: module.id });
   const isExamModule = module.moduleType === 'exam';
+  const isActive = (module.status ?? 'active') === 'active';
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -156,13 +158,13 @@ const SortableModuleItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100"
+      className={`rounded-2xl border p-4 ${isActive ? 'border-slate-200 bg-slate-50 hover:bg-slate-100' : 'border-amber-200 bg-amber-50/70 hover:bg-amber-100/70'}`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <DragHandle attributes={attributes} listeners={listeners} className="mt-1" />
           <div
-            className="flex-1 cursor-pointer rounded-xl px-2 py-1 hover:bg-slate-100"
+            className={`flex-1 cursor-pointer rounded-xl px-2 py-1 ${isActive ? 'hover:bg-slate-100' : 'hover:bg-amber-100/80'}`}
             onClick={() => onOpen(module.id)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -174,15 +176,22 @@ const SortableModuleItem = ({
             tabIndex={0}
           >
             <div>
-              <h4 className="text-lg font-semibold text-slate-900">
-                {getLocaleValue(module.title, activeLanguage) || t.common.untitled}
-              </h4>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className={`text-lg font-semibold ${isActive ? 'text-slate-900' : 'text-slate-700'}`}>
+                  {getLocaleValue(module.title, activeLanguage) || t.common.untitled}
+                </h4>
+                {!isActive && (
+                  <span className="rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                    {t.admin.moduleDetail.inactiveModule}
+                  </span>
+                )}
+              </div>
               {getLocaleValue(module.summary, activeLanguage) && (
-                <p className="text-sm text-slate-500">
+                <p className={`text-sm ${isActive ? 'text-slate-500' : 'text-slate-600'}`}>
                   {getLocaleValue(module.summary, activeLanguage)}
                 </p>
               )}
-              <p className="text-xs text-slate-500">
+              <p className={`text-xs ${isActive ? 'text-slate-500' : 'text-slate-600'}`}>
                 {t.admin.courseDetail.questionCount(module.questions.length)}
               </p>
               {isExamModule && (
@@ -197,6 +206,15 @@ const SortableModuleItem = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            onClick={() => onToggleStatus(module.id)}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${isActive ? 'bg-emerald-500' : 'bg-slate-200'}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${isActive ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+          </button>
           <DuplicateButton onClick={() => onDuplicate(module)}>{t.common.duplicate}</DuplicateButton>
           <button
             onClick={() => onDelete(module.id)}
@@ -226,6 +244,17 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
   } = useCourseModules(courseId);
 
   const [moduleItems, setModuleItems] = useState<CourseModule[]>([]);
+  const moduleNavItems = useMemo(
+    () =>
+      moduleItems.map((m) => ({
+        id: m.id,
+        title: m.title ?? {},
+        questionCount: m.questions?.length ?? 0,
+        isExam: m.moduleType === 'exam',
+        status: m.status ?? 'active',
+      })),
+    [moduleItems],
+  );
   const [ordering, setOrdering] = useState(false);
   const [orderingError, setOrderingError] = useState<string | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<CourseModule | null>(null);
@@ -411,9 +440,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   const [languages, setLanguages] = useState<string[]>(DEFAULT_LANGUAGES);
   const [activeLanguage, setActiveLanguage] = useState<string>(DEFAULT_LANGUAGES[0]);
-  const [isAddingLanguage, setIsAddingLanguage] = useState(false);
-  const [languageInput, setLanguageInput] = useState('');
-  const languageInputRef = useRef<HTMLInputElement | null>(null);
   const initializedCourseIdRef = useRef<string | null>(null);
   const hasDiscoveredModuleLanguages = useRef(false);
   const [savingCourseInfo, setSavingCourseInfo] = useState(false);
@@ -451,13 +477,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     }
   }, [languages, activeLanguage]);
 
-  useEffect(() => {
-    if (isAddingLanguage) {
-      requestAnimationFrame(() => {
-        languageInputRef.current?.focus();
-      });
-    }
-  }, [isAddingLanguage]);
 
   useEffect(() => {
     form.register('status');
@@ -467,6 +486,21 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     const nextStatus = event.target.value as CourseInfoFormValues['status'];
     form.setValue('status', nextStatus, { shouldDirty: true });
   };
+
+  const courseEditBarSetter = useCourseEditBarSetter();
+
+  useEffect(() => {
+    if (!courseEditBarSetter) return;
+    courseEditBarSetter.setInfo({
+      type: 'course',
+      backHref: '/courses',
+      languages,
+      activeLanguage,
+      status: statusValue,
+      moduleNavItems,
+    });
+    return () => courseEditBarSetter.setInfo(null);
+  }, [courseEditBarSetter, languages, activeLanguage, statusValue, moduleNavItems]);
 
   const [isQuickCreateOpen, setQuickCreateOpen] = useState(false);
   const [quickCreateSaving, setQuickCreateSaving] = useState(false);
@@ -611,6 +645,34 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     }
   };
 
+  const handleToggleModuleStatus = useCallback(
+    async (moduleId: string) => {
+      if (!courseId) return;
+      const target = moduleItems.find((m) => m.id === moduleId);
+      if (!target) return;
+      const nextStatus: 'active' | 'inactive' =
+        (target.status ?? 'active') === 'active' ? 'inactive' : 'active';
+      setModuleItems((prev) =>
+        prev.map((m) => (m.id === moduleId ? { ...m, status: nextStatus } : m)),
+      );
+      try {
+        await updateDoc(doc(db, 'courses', courseId, 'modules', moduleId), {
+          status: nextStatus,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error('Failed to toggle module status', err);
+        setModuleItems((prev) =>
+          prev.map((m) =>
+            m.id === moduleId ? { ...m, status: target.status ?? 'active' } : m,
+          ),
+        );
+        alert(t.admin.moduleDetail.toggleModuleStatusError);
+      }
+    },
+    [courseId, moduleItems, t.admin.moduleDetail.toggleModuleStatusError],
+  );
+
   const handleDuplicateModule = async (values: DuplicateModuleFormValues) => {
     if (!duplicateTarget || !courseId) {
       return;
@@ -696,16 +758,12 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     const trimmed = lang.trim().toLowerCase();
     if (!trimmed) return;
     if (languages.includes(trimmed)) {
-      setLanguageInput('');
-      setIsAddingLanguage(false);
       setActiveLanguage(trimmed);
       return;
     }
 
     const nextLanguages = [...languages, trimmed];
     setLanguages(nextLanguages);
-    setLanguageInput('');
-    setIsAddingLanguage(false);
     setActiveLanguage(trimmed);
     const ensureCourseLocales = (map: LocaleStringMap | undefined) => {
       const base = createEmptyLocaleMap(nextLanguages);
@@ -723,6 +781,17 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
       ensureCourseLocales(form.getValues('description')),
       { shouldDirty: true },
     );
+    if (courseId) {
+      modules.forEach((m) => {
+        const moduleLangs = Array.isArray(m.languages) ? m.languages : nextLanguages.filter((l) => l !== trimmed);
+        if (!moduleLangs.includes(trimmed)) {
+          updateDoc(doc(db, 'courses', courseId, 'modules', m.id), {
+            languages: [...moduleLangs, trimmed],
+            updatedAt: serverTimestamp(),
+          }).catch((err) => console.error('Failed to update module language', err));
+        }
+      });
+    }
   };
 
   const removeLanguage = (lang: string) => {
@@ -739,6 +808,20 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     };
     form.setValue('title', stripKey(form.getValues('title')), { shouldDirty: true });
     form.setValue('description', stripKey(form.getValues('description')), { shouldDirty: true });
+    if (courseId) {
+      modules.forEach((m) => {
+        const moduleLangs = Array.isArray(m.languages) ? m.languages : [];
+        if (moduleLangs.includes(lang)) {
+          const newLangs = moduleLangs.filter((l) => l !== lang);
+          if (newLangs.length > 0) {
+            updateDoc(doc(db, 'courses', courseId, 'modules', m.id), {
+              languages: newLangs,
+              updatedAt: serverTimestamp(),
+            }).catch((err) => console.error('Failed to remove module language', err));
+          }
+        }
+      });
+    }
   };
 
   const handleRemoveActiveLanguage = () => {
@@ -753,6 +836,25 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
     }
     removeLanguage(activeLanguage);
   };
+
+  if (courseEditBarSetter) {
+    courseEditBarSetter.handlersRef.current = {
+      setActiveLanguage,
+      addLanguage,
+      handleRemoveActiveLanguage,
+      handleStatusChange,
+      openAddModule: openCreateModule,
+      duplicateModule: (moduleId) => {
+        const target = moduleItems.find((m) => m.id === moduleId);
+        if (target) {
+          setDuplicateError(null);
+          setDuplicateTarget(target);
+        }
+      },
+      deleteModule: handleDeleteModule,
+      toggleModuleStatus: handleToggleModuleStatus,
+    };
+  }
 
   const handleCourseInfoSave = form.handleSubmit(async (values) => {
     if (!course) return;
@@ -909,6 +1011,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 setDuplicateError(null);
                 setDuplicateTarget(target);
               }}
+              onToggleStatus={handleToggleModuleStatus}
             />
           ))}
         </div>
@@ -922,110 +1025,6 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/courses"
-            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
-          >
-            {t.admin.courses.backToCourseList}
-          </Link>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {t.admin.courses.courseAdmin}
-          </p>
-        </div>
-      </div>
-      <div className="flex min-h-18 flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {languages.map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              onClick={() => setActiveLanguage(lang)}
-              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
-                activeLanguage === lang
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              {lang.toUpperCase()}
-            </button>
-          ))}
-          {isAddingLanguage ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                addLanguage(languageInput);
-              }}
-              className="flex items-center gap-2"
-            >
-              <input
-                ref={languageInputRef}
-                value={languageInput}
-                onChange={(e) => setLanguageInput(e.target.value)}
-                placeholder={t.common.languageCode}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
-              >
-                {t.common.add}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingLanguage(false);
-                  setLanguageInput('');
-                }}
-                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.common.cancel}
-              >
-                ×
-              </button>
-            </form>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingLanguage(true);
-                  setLanguageInput('');
-                }}
-                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.common.addLanguage}
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveActiveLanguage}
-                disabled={languages.length <= 1}
-                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                aria-label={t.common.removeLanguageLabel(activeLanguage.toUpperCase())}
-                title={t.common.removeLanguageTitle(activeLanguage.toUpperCase())}
-              >
-                -
-              </button>
-            </>
-          )}
-        </div>
-        <label
-          htmlFor="course-status-select"
-          className="flex items-center gap-2 text-sm font-medium text-slate-700"
-        >
-          <span>{t.common.status}</span>
-          <SelectWithToggleIcon
-            id="course-status-select"
-            value={statusValue}
-            onChange={handleStatusChange}
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-          >
-            <option value="active">{t.admin.courses.activeStatus}</option>
-            <option value="inactive">{t.admin.courses.inactiveStatus}</option>
-          </SelectWithToggleIcon>
-        </label>
-      </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

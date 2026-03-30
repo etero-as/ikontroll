@@ -65,6 +65,10 @@ export default function ConsumerCourseDetailPage() {
   }
 
   return (
-    <ConsumerCourseView course={course} modules={modules} basePath="/my-courses" />
+    <ConsumerCourseView
+      course={course}
+      modules={modules.filter((m) => (m.status ?? 'active') === 'active')}
+      basePath="/my-courses"
+    />
   );
 }

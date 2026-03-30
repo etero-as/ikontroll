@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -38,6 +37,8 @@ import { db, storage } from '@/lib/firebase';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
 import { useCourseModule } from '@/hooks/useCourseModule';
+import { useCourseModules } from '@/hooks/useCourseModules';
+import { useCourseEditBarSetter } from '@/context/AdminBarContext';
 import SaveChangesButton from '@/components/SaveChangesButton';
 import DragHandle, { DragHandleIcon } from '@/components/DragHandle';
 import DuplicateButton from '@/components/DuplicateButton';
@@ -195,15 +196,25 @@ export default function CourseModuleDetailPage() {
   const moduleId = Array.isArray(moduleParam) ? moduleParam[0] : moduleParam ?? null;
 
   const { module, loading, error } = useCourseModule(courseId, moduleId);
+  const { modules } = useCourseModules(courseId);
+  const moduleNavItems = useMemo(
+    () =>
+      [...modules]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((m) => ({
+          id: m.id,
+          title: m.title ?? {},
+          questionCount: m.questions?.length ?? 0,
+          isExam: m.moduleType === 'exam',
+          status: m.status ?? 'active',
+        })),
+    [modules],
+  );
   const [languages, setLanguages] = useState<string[]>(DEFAULT_LANGUAGES);
   const [activeLanguage, setActiveLanguage] = useState<string>(DEFAULT_LANGUAGES[0]);
   const [draft, setDraft] = useState<CourseModulePayload | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [isAddingLanguage, setIsAddingLanguage] = useState(false);
-  const [languageInput, setLanguageInput] = useState('');
-  const [languageInputError, setLanguageInputError] = useState(false);
-  const languageInputRef = useRef<HTMLInputElement | null>(null);
   const initializedModuleIdRef = useRef<string | null>(null);
   const languageScrollRestoreRef = useRef<number | null>(null);
 
@@ -231,6 +242,7 @@ export default function CourseModuleDetailPage() {
       moduleType,
       examPassPercentage,
       mediaSync: module.mediaSync ?? false,
+      status: module.status ?? 'active',
     };
 
     const isFirstLoad = initializedModuleIdRef.current !== moduleId;
@@ -302,8 +314,6 @@ export default function CourseModuleDetailPage() {
     const nextLanguages = [...languages, trimmed];
     setLanguages(nextLanguages);
     setActiveLanguage(trimmed);
-    setLanguageInput('');
-    setIsAddingLanguage(false);
     setDraft((prev) => {
       if (!prev) return prev;
       const baseMedia = ensureMediaLocales(prev.media, nextLanguages);
@@ -333,6 +343,23 @@ export default function CourseModuleDetailPage() {
         })),
       };
     });
+    if (courseId) {
+      Promise.all([
+        updateDoc(doc(db, 'courses', courseId), {
+          languages: nextLanguages,
+          updatedAt: serverTimestamp(),
+        }),
+        ...modules.map((item) =>
+          updateDoc(doc(db, 'courses', courseId, 'modules', item.id), {
+            languages: nextLanguages,
+            updatedAt: serverTimestamp(),
+          }),
+        ),
+      ]).catch((err) => {
+        console.error('Failed to add language globally', err);
+        setFormError(t.admin.moduleDetail.saveModuleError);
+      });
+    }
   };
 
   const removeLanguage = (lang: string) => {
@@ -378,6 +405,23 @@ export default function CourseModuleDetailPage() {
           }
         : prev,
     );
+    if (courseId) {
+      Promise.all([
+        updateDoc(doc(db, 'courses', courseId), {
+          languages: nextLanguages,
+          updatedAt: serverTimestamp(),
+        }),
+        ...modules.map((item) =>
+          updateDoc(doc(db, 'courses', courseId, 'modules', item.id), {
+            languages: nextLanguages,
+            updatedAt: serverTimestamp(),
+          }),
+        ),
+      ]).catch((err) => {
+        console.error('Failed to remove language globally', err);
+        setFormError(t.admin.moduleDetail.saveModuleError);
+      });
+    }
   };
 
   const handleRemoveActiveLanguage = () => {
@@ -393,13 +437,56 @@ export default function CourseModuleDetailPage() {
     removeLanguage(activeLanguage);
   };
 
+  const handleToggleModuleStatus = useCallback(
+    async (targetModuleId: string) => {
+      if (!courseId) {
+        return;
+      }
+      const target = modules.find((item) => item.id === targetModuleId);
+      if (!target) {
+        return;
+      }
+      const nextStatus: 'active' | 'inactive' =
+        (target.status ?? 'active') === 'active' ? 'inactive' : 'active';
+      try {
+        await updateDoc(doc(db, 'courses', courseId, 'modules', targetModuleId), {
+          status: nextStatus,
+          updatedAt: serverTimestamp(),
+        });
+        if (targetModuleId === moduleId) {
+          setDraft((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+        }
+      } catch (err) {
+        console.error('Failed to toggle module status', err);
+        setFormError(t.admin.moduleDetail.toggleModuleStatusError);
+      }
+    },
+    [courseId, moduleId, modules, t.admin.moduleDetail.toggleModuleStatusError],
+  );
+
+  const courseEditBarSetter = useCourseEditBarSetter();
+
+  if (courseEditBarSetter) {
+    courseEditBarSetter.handlersRef.current = {
+      setActiveLanguage: handleLanguageSelect,
+      addLanguage,
+      handleRemoveActiveLanguage,
+      toggleModuleStatus: handleToggleModuleStatus,
+    };
+  }
+
   useEffect(() => {
-    if (isAddingLanguage) {
-      requestAnimationFrame(() => {
-        languageInputRef.current?.focus();
-      });
-    }
-  }, [isAddingLanguage]);
+    if (!courseEditBarSetter || !courseId || !moduleId) return;
+    courseEditBarSetter.setInfo({
+      type: 'module',
+      backHref: `/courses/${courseId}`,
+      languages,
+      activeLanguage,
+      moduleNavItems,
+      currentModuleId: moduleId,
+    });
+    return () => courseEditBarSetter.setInfo(null);
+  }, [courseEditBarSetter, courseId, moduleId, languages, activeLanguage, moduleNavItems]);
 
   useEffect(() => {
     const top = languageScrollRestoreRef.current;
@@ -438,6 +525,7 @@ export default function CourseModuleDetailPage() {
         moduleType: draft.moduleType ?? 'normal',
         languages,
         mediaSync: draft.mediaSync ?? false,
+        status: draft.status ?? 'active',
         updatedAt: serverTimestamp(),
       };
       if (draft.moduleType === 'exam') {
@@ -509,111 +597,8 @@ export default function CourseModuleDetailPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/courses/${courseId}`}
-            className="cursor-pointer text-sm font-semibold text-slate-600 transition hover:text-slate-900"
-          >
-            {t.admin.moduleDetail.backToCourseAdmin}
-          </Link>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {t.admin.moduleDetail.moduleAdmin}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex min-h-18 flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {languages.map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              onClick={() => handleLanguageSelect(lang)}
-              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition ${
-                activeLanguage === lang
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              {lang.toUpperCase()}
-            </button>
-          ))}
-          {isAddingLanguage ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setLanguageInputError(false);
-                addLanguage(languageInput);
-              }}
-              className="relative flex items-center gap-2"
-            >
-              <input
-                ref={languageInputRef}
-                value={languageInput}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const cleaned = raw.replace(/[^a-zA-Z]/g, '');
-                  setLanguageInputError(cleaned !== raw && raw.length > 0);
-                  setLanguageInput(cleaned);
-                }}
-                placeholder={t.common.languageCode}
-                className="rounded-lg border border-slate-200 px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
-              >
-                {t.common.add}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingLanguage(false);
-                  setLanguageInput('');
-                  setLanguageInputError(false);
-                }}
-                className="cursor-pointer rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.common.cancel}
-              >
-                ×
-              </button>
-              {languageInputError && (
-                <p className="pointer-events-none absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-red-500">
-                  {t.common.languageCodeOnlyLetters}
-                </p>
-              )}
-            </form>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingLanguage(true);
-                  setLanguageInput('');
-                }}
-                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-slate-200 p-0 text-sm font-semibold leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.common.addLanguage}
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveActiveLanguage}
-                disabled={languages.length <= 1}
-                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
-                aria-label={t.common.removeLanguageLabel(activeLanguage.toUpperCase())}
-                title={t.common.removeLanguageTitle(activeLanguage.toUpperCase())}
-              >
-                -
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`flex flex-col gap-3 rounded-xl border-b border-slate-100 px-3 py-2 pb-4 sm:flex-row sm:items-center sm:justify-between ${(draft.status ?? 'active') === 'inactive' ? 'bg-amber-50' : ''}`}>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               {t.admin.moduleDetail.moduleInfoLabel}
@@ -636,7 +621,7 @@ export default function CourseModuleDetailPage() {
         <div className="mt-6 space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-8 md:grid-cols-2">
                 <LocaleFieldEditor
                   label={t.common.title}
                   value={draft.title ?? {}}
@@ -644,6 +629,35 @@ export default function CourseModuleDetailPage() {
                   activeLanguage={activeLanguage}
                   variant="courseInfo"
                 />
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <span>{t.common.status}</span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {(draft.status ?? 'active') === 'active'
+                        ? t.admin.moduleDetail.activeModule
+                        : t.admin.moduleDetail.inactiveModule}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={(draft.status ?? 'active') === 'active'}
+                      onClick={() =>
+                        updateField(
+                          'status',
+                          (draft.status ?? 'active') === 'active' ? 'inactive' : 'active',
+                        )
+                      }
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none ${(draft.status ?? 'active') === 'active' ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                    >
+                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${(draft.status ?? 'active') === 'active' ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                  <p className="max-w-65 text-xs font-normal text-slate-500">
+                    {(draft.status ?? 'active') === 'active'
+                      ? t.admin.moduleDetail.moduleStatusHelpActive
+                      : t.admin.moduleDetail.moduleStatusHelpInactive}
+                  </p>
+                </div>
 
                 <LocaleFieldEditor
                   label={t.common.description}
@@ -774,6 +788,7 @@ const LocaleFieldEditor = ({
   multiline,
   variant = 'default',
   containerClassName,
+  headerRight,
 }: {
   label: string;
   value: LocaleStringMap;
@@ -782,6 +797,7 @@ const LocaleFieldEditor = ({
   multiline?: boolean;
   variant?: 'default' | 'courseInfo';
   containerClassName?: string;
+  headerRight?: ReactNode;
 }) => {
   const currentValue = value?.[activeLanguage] ?? '';
 
@@ -813,8 +829,11 @@ const LocaleFieldEditor = ({
       >
         <span className="flex items-center justify-between">
           <span>{label}</span>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {activeLanguage.toUpperCase()}
+          <span className="flex items-center gap-2">
+            {headerRight}
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {activeLanguage.toUpperCase()}
+            </span>
           </span>
         </span>
         {field}
@@ -2356,7 +2375,6 @@ const SortableQuestionAlternative = ({
   id,
   alternative,
   idx,
-  question,
   currentCorrectIds,
   onToggleCorrect,
   onRemove,
@@ -2366,7 +2384,6 @@ const SortableQuestionAlternative = ({
   id: UniqueIdentifier;
   alternative: CourseQuestionAlternative;
   idx: number;
-  question: CourseQuestion;
   currentCorrectIds: string[];
   onToggleCorrect: (altId: string) => void;
   onRemove: (altId: string) => void;
@@ -2406,15 +2423,13 @@ const SortableQuestionAlternative = ({
             />
             {t.admin.moduleDetail.correctAnswer}
           </label>
-          {question.alternatives.length > 2 && (
-            <button
-              type="button"
-              onClick={() => onRemove(alternative.id)}
-              className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
-            >
-              {t.admin.moduleDetail.removeAlternative}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onRemove(alternative.id)}
+            className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+          >
+            {t.admin.moduleDetail.removeAlternative}
+          </button>
         </div>
       </div>
 
@@ -2495,10 +2510,16 @@ const QuestionEditor = ({
 
   const removeAlternative = (altId: string) => {
     const filtered = question.alternatives.filter((alt) => alt.id !== altId);
-    let nextCorrectIds = currentCorrectIds.filter((id) => id !== altId);
-    if (nextCorrectIds.length === 0 && filtered.length > 0) {
-      nextCorrectIds = [filtered[0].id];
+    if (filtered.length === 0) {
+      const confirmed = window.confirm(
+        t.admin.moduleDetail.lastAlternativeWarning(index + 1),
+      );
+      if (confirmed) {
+        onRemove();
+      }
+      return;
     }
+    const nextCorrectIds = currentCorrectIds.filter((id) => id !== altId);
     onChange({
       ...question,
       alternatives: filtered,
@@ -2508,12 +2529,9 @@ const QuestionEditor = ({
   };
 
   const toggleCorrectAnswer = (altId: string) => {
-    let nextCorrectIds = currentCorrectIds.includes(altId)
+    const nextCorrectIds = currentCorrectIds.includes(altId)
       ? currentCorrectIds.filter((id) => id !== altId)
       : [...currentCorrectIds, altId];
-    if (nextCorrectIds.length === 0) {
-      nextCorrectIds = [altId];
-    }
     const ordered = question.alternatives
       .map((alt) => alt.id)
       .filter((id) => nextCorrectIds.includes(id));
@@ -2634,7 +2652,6 @@ const QuestionEditor = ({
                       id={alternative.id}
                       alternative={alternative}
                       idx={idx}
-                      question={question}
                       currentCorrectIds={currentCorrectIds}
                       onToggleCorrect={toggleCorrectAnswer}
                       onRemove={removeAlternative}

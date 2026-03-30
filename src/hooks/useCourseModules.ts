@@ -63,6 +63,9 @@ const normalizeLocaleArrayMap = (value: unknown): LocaleStringArrayMap => {
 const normalizeModuleType = (value: unknown): CourseModuleType =>
   value === 'exam' ? 'exam' : 'normal';
 
+const normalizeModuleStatus = (value: unknown): 'active' | 'inactive' =>
+  value === 'inactive' ? 'inactive' : 'active';
+
 const normalizeLanguages = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
@@ -153,6 +156,7 @@ export const useCourseModules = (
             typeof data.examPassPercentage === 'number'
               ? data.examPassPercentage
               : undefined;
+          const status = normalizeModuleStatus(data.status);
           return {
             id: docSnap.id,
             courseId,
@@ -169,6 +173,7 @@ export const useCourseModules = (
             languages: normalizeLanguages(data.languages),
             moduleType,
             examPassPercentage,
+            status,
             createdAt: data.createdAt?.toDate?.() ?? undefined,
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,
           } satisfies CourseModule;

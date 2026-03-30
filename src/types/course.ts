@@ -62,6 +62,7 @@ export interface CourseModule {
   moduleType?: CourseModuleType;
   examPassPercentage?: number;
   mediaSync?: boolean;
+  status?: 'active' | 'inactive';
   createdAt?: Date;
   updatedAt?: Date;
 }
