@@ -10,6 +10,7 @@ import { useCustomer } from '@/hooks/useCustomer';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import CourseEditBar from '@/components/AdminBar';
 
 type MenuPosition = { top: number; right: number };
 
@@ -144,7 +145,8 @@ export function Topbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
+      <div className="sticky top-0 z-40">
+        <header className="flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="text-xl font-bold text-slate-900">
             IKontroll
@@ -176,6 +178,8 @@ export function Topbar() {
           </button>
         </div>
       </header>
+      <CourseEditBar />
+    </div>
       {menu}
     </>
   );

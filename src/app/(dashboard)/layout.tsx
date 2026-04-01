@@ -9,6 +9,7 @@ import { CustomerPicker } from '@/components/CustomerPicker';
 import PortalModePrompt from '@/components/PortalModePrompt';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
+import { CourseEditBarProvider } from '@/context/AdminBarContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
@@ -98,15 +99,17 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen flex-col bg-slate-50">
-      <PortalModePrompt />
-      <Topbar />
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 overflow-auto bg-slate-50 p-6">{children}</main>
+    <CourseEditBarProvider>
+      <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
+        <PortalModePrompt />
+        <Topbar />
+        <div className="flex min-h-0 flex-1">
+          <Sidebar />
+          <main className="flex-1 overflow-auto bg-slate-50 p-6">{children}</main>
+        </div>
+        {isSystemOwner && <CompanyPicker />}
+        {isCustomerAdmin && <CustomerPicker />}
       </div>
-      {isSystemOwner && <CompanyPicker />}
-      {isCustomerAdmin && <CustomerPicker />}
-    </div>
+    </CourseEditBarProvider>
   );
 }

@@ -24,6 +24,7 @@ import {
 } from '@/utils/localization';
 import { getLocalizedMediaItems } from '@/utils/media';
 import { getTranslation } from '@/utils/translations';
+import AnnotatedImage from '@/components/AnnotatedImage';
 
 interface ConsumerModuleViewProps {
   course: Course;
@@ -128,7 +129,11 @@ export default function ConsumerModuleView({
   const { firebaseUser } = useAuth();
   const { locale: preferredLocale, setLocale } = useLocale();
   const { completedModules, setModuleCompletion, moduleAnsweredCounts, moduleAnswers, saveModuleAnswers, loading: progressLoading } = useCourseProgress(course.id);
-  const { modules } = useCourseModules(course.id);
+  const { modules: allModules } = useCourseModules(course.id);
+  const modules = useMemo(
+    () => allModules.filter((m) => (m.status ?? 'active') === 'active'),
+    [allModules],
+  );
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
@@ -167,7 +172,7 @@ export default function ConsumerModuleView({
   const localizedMedia = getLocalizedMediaItems(module.media, locale);
   const fallbackImages = getLocalizedList(module.imageUrls, locale);
   const fallbackVideos = getLocalizedList(module.videoUrls, locale);
-  type MediaListItem = { url: string; type: MediaPreviewType; caption?: string };
+  type MediaListItem = { url: string; type: MediaPreviewType; caption?: string; annotations?: import('@/types/course').AnnotationShape[] };
   const mediaItems = useMemo<MediaListItem[]>(
     () => {
       if (localizedMedia.length) {
@@ -175,6 +180,7 @@ export default function ConsumerModuleView({
           url: item.url,
           type: item.type as MediaPreviewType,
           caption: item.caption,
+          annotations: item.annotations,
         }));
       }
       return [
@@ -282,7 +288,7 @@ export default function ConsumerModuleView({
   const [showCourseComplete, setShowCourseComplete] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: MediaPreviewType; caption?: string } | null>(
+  const [mediaPreview, setMediaPreview] = useState<{ url: string; type: MediaPreviewType; caption?: string; annotations?: import('@/types/course').AnnotationShape[] } | null>(
     null,
   );
   const [previewImgError, setPreviewImgError] = useState(false);
@@ -573,10 +579,10 @@ export default function ConsumerModuleView({
           <div className="relative" ref={moduleDropdownRef}>
             <button
               onClick={() => setModuleDropdownOpen((p) => !p)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="flex max-w-55 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              {t.modules.allModules}
-              <ChevronDown size={14} />
+              <span className="truncate">{moduleTitle}</span>
+              <ChevronDown size={14} className="shrink-0" />
             </button>
             {moduleDropdownOpen && (
               <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -667,14 +673,15 @@ export default function ConsumerModuleView({
                 {t.modules.mediaGallery}
               </p>
               <div className="flex gap-4 overflow-x-auto pb-2">
-                {mediaItems.map(({ url, type, caption }) => {
+                {mediaItems.map(({ url, type, caption, annotations }) => {
                   const isVideo = type === 'video';
                   const isDocument = type === 'document';
+                  const hasAnnotationData = annotations && annotations.length > 0;
                   return (
                     <button
                       key={url}
                       type="button"
-                      onClick={() => setMediaPreview({ url, type, caption })}
+                      onClick={() => setMediaPreview({ url, type, caption, annotations })}
                       className="flex flex-col shrink-0 w-[165px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-slate-300"
                     >
                       <div className="relative h-[165px] w-full shrink-0 overflow-hidden bg-slate-100">
@@ -715,6 +722,13 @@ export default function ConsumerModuleView({
                               {getFileNameFromUrl(url)}
                             </span>
                           </div>
+                        ) : hasAnnotationData ? (
+                          <AnnotatedImage
+                            src={url}
+                            alt="Modulbilde"
+                            annotations={annotations}
+                            className="h-full w-full"
+                          />
                         ) : (
                           <MediaImage src={url} alt="Modulbilde" className="h-full w-full object-contain" />
                         )}
@@ -979,6 +993,15 @@ export default function ConsumerModuleView({
                           <div className="flex flex-col items-center justify-center gap-3 p-16 text-slate-400">
                             <span className="text-5xl" role="img" aria-label="Bildet mangler">🖼️</span>
                             <p className="text-sm font-semibold">Bildet er ikke å finne</p>
+                          </div>
+                        ) : mediaPreview.annotations?.length ? (
+                          <div className="h-[85vh] w-full">
+                            <AnnotatedImage
+                              src={mediaPreview.url}
+                              alt="Modulbilde"
+                              annotations={mediaPreview.annotations}
+                              className="h-full w-full"
+                            />
                           </div>
                         ) : (
                           <Image

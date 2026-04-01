@@ -231,7 +231,10 @@ export default function CoursePreviewPage({
     error: modulesError,
   } = useCourseModules(courseId);
 
-  const sortedModules = modules;
+  const sortedModules = useMemo(
+    () => modules.filter((m) => (m.status ?? 'active') === 'active'),
+    [modules],
+  );
 
   const availableLocales = useMemo(() => {
     const set = new Set<string>();
