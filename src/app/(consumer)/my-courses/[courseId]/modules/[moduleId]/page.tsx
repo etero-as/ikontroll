@@ -7,6 +7,8 @@ import ConsumerModuleView from '@/components/consumer/ConsumerModuleView';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModule } from '@/hooks/useCourseModule';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export default function ConsumerModuleDetailPage() {
   const params = useParams();
@@ -14,6 +16,8 @@ export default function ConsumerModuleDetailPage() {
   const moduleId = params.moduleId as string;
   const router = useRouter();
   const { profile, activeCustomerId, setActiveCustomerId } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   const memberships = (profile?.customerMemberships ?? []).filter(
     (membership) => (membership.assignedCourseIds ?? []).includes(courseId),
@@ -35,7 +39,7 @@ export default function ConsumerModuleDetailPage() {
   if (courseLoading || moduleLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Laster emne …
+        {t.common.loading}
       </div>
     );
   }
@@ -44,12 +48,12 @@ export default function ConsumerModuleDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="space-y-4 rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-center text-sm text-red-600">
-          <p>Du har ikke tilgang til dette emnet.</p>
+          <p>{t.modules.noAccessToModule}</p>
           <button
             onClick={() => router.replace('/my-courses')}
             className="rounded-full bg-red-600 px-4 py-2 text-white transition hover:bg-red-500"
           >
-            Tilbake til Mine kurs
+            {t.courses.backToMyCourses}
           </button>
         </div>
       </div>
@@ -60,7 +64,7 @@ export default function ConsumerModuleDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
-          {courseError ?? moduleError ?? 'Fant ikke emnet.'}
+          {courseError ?? moduleError ?? t.modules.moduleNotFound}
         </div>
       </div>
     );

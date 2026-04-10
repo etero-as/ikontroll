@@ -6,6 +6,8 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { signInWithCustomToken } from 'firebase/auth';
 
 import { auth } from '@/lib/firebase';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 const normalizeRedirect = (value: string | null) => {
   if (!value) {
@@ -17,6 +19,8 @@ const normalizeRedirect = (value: string | null) => {
 function MagicLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const attemptedRef = useRef(false);
@@ -53,7 +57,7 @@ function MagicLoginContent() {
             } catch {
               errorText = await response.text();
             }
-            throw new Error(errorText || 'Kunne ikke hente magisk lenke / Failed to resolve link');
+            throw new Error(errorText || t.auth.magicLinkResolveError);
           }
 
           const payload = (await response.json()) as { token: string; redirect?: string };
@@ -64,7 +68,7 @@ function MagicLoginContent() {
         }
 
         if (!effectiveToken) {
-          throw new Error('Magisk lenke mangler eller er ugyldig. / Magic link missing or invalid.');
+          throw new Error(t.auth.magicLinkMissing);
         }
 
         attemptedRef.current = true;
@@ -74,14 +78,13 @@ function MagicLoginContent() {
         console.error('Magic login failed', error);
         setStatus('error');
         setErrorMessage(
-          (error as Error)?.message ??
-            'Kunne ikke logge deg inn automatisk. Lenken kan ha utløpt. / Automatic login failed, the link may have expired.',
+          (error as Error)?.message ?? t.auth.magicLinkExpired,
         );
       }
     };
 
     performLogin();
-  }, [token, code, redirectTarget, router, status]);
+  }, [token, code, redirectTarget, router, status, t]);
 
   const isLoading = status === 'loading';
 
@@ -91,33 +94,29 @@ function MagicLoginContent() {
         {isLoading ? (
           <>
             <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
-            <h1 className="text-xl font-semibold text-slate-900">Logger deg inn …</h1>
+            <h1 className="text-xl font-semibold text-slate-900">{t.auth.loggingYouIn}</h1>
             <p className="mt-2 text-sm text-slate-500">
-              Vi bruker lenken du fikk tilsendt for å logge deg inn automatisk.
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Signing you in automatically with your secure link.
+              {t.auth.magicLinkDescription}
             </p>
           </>
         ) : (
           <>
-            <h1 className="text-xl font-semibold text-slate-900">Kunne ikke logge inn</h1>
+            <h1 className="text-xl font-semibold text-slate-900">{t.auth.magicLinkFailedTitle}</h1>
             <p className="mt-2 text-sm text-slate-600">
-              {errorMessage ??
-                'Lenken er ugyldig eller utløpt. Prøv igjen eller bruk vanlig innlogging.'}
+              {errorMessage ?? t.auth.magicLinkInvalidOrExpired}
             </p>
             <div className="mt-6 flex flex-col gap-3">
               <Link
                 href="/login"
                 className="w-full rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                Gå til innlogging / Go to login
+                {t.auth.goToLogin}
               </Link>
               <Link
                 href="/my-courses"
                 className="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Mine kurs / My courses
+                {t.common.myCourses}
               </Link>
             </div>
           </>
@@ -138,9 +137,6 @@ export default function MagicLoginPage() {
             <p className="mt-2 text-sm text-slate-500">
               Vi bruker lenken du fikk tilsendt for å logge deg inn automatisk.
             </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Signing you in automatically with your secure link.
-            </p>
           </div>
         </div>
       }
@@ -149,4 +145,3 @@ export default function MagicLoginPage() {
     </Suspense>
   );
 }
-

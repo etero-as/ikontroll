@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useCompanyUsers } from '@/hooks/useCompanyUsers';
 import { useCourse } from '@/hooks/useCourse';
 import { useCourseModules } from '@/hooks/useCourseModules';
@@ -11,12 +12,15 @@ import { useCourseUsersProgress } from '@/hooks/useCourseUsersProgress';
 import { useCustomer } from '@/hooks/useCustomer';
 import type { CompanyUser, CompanyUserRole, CustomerMembership } from '@/types/companyUser';
 import { getLocalizedValue } from '@/utils/localization';
+import { getTranslation } from '@/utils/translations';
 
 export default function CourseDelegationPage() {
   const params = useParams();
   const courseId = params.courseId as string;
   const router = useRouter();
   const { activeCustomerId, isCustomerAdmin, firebaseUser } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   // 1. Fetch Course Details
   const { course, loading: courseLoading } = useCourse(courseId);
@@ -95,20 +99,20 @@ const ensureUserRoleForAssignment = (
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Kunne ikke opprette kode.');
+        throw new Error(payload.error || t.admin.courseInvite.createError);
       }
       const data = (await response.json().catch(() => ({}))) as { code?: string };
       if (!data.code) {
-        throw new Error('Mottok ingen kode.');
+        throw new Error(t.admin.courseInvite.noCode);
       }
       setInviteCode(data.code);
       if (typeof window !== 'undefined') {
         setInviteLink(`${window.location.origin}/course-signup?code=${data.code}`);
       }
-      setInviteMessage('Koden er opprettet og klar til deling.');
+      setInviteMessage(t.admin.courseInvite.codeCreated);
     } catch (err) {
       console.error('Failed to create invite code', err);
-      setInviteError(err instanceof Error ? err.message : 'Kunne ikke opprette kode.');
+      setInviteError(err instanceof Error ? err.message : t.admin.courseInvite.createError);
     } finally {
       setCreatingInvite(false);
     }
@@ -121,7 +125,7 @@ const ensureUserRoleForAssignment = (
       setInviteError(null);
     } catch (err) {
       console.error('Failed to copy invite', err);
-      setInviteError('Kunne ikke kopiere til utklippstavlen.');
+      setInviteError(t.admin.courseInvite.copyError);
     }
   };
 
@@ -165,7 +169,7 @@ const ensureUserRoleForAssignment = (
       );
     } catch (err) {
       console.error('Failed to update assignment', err);
-      alert('Kunne ikke oppdatere tildeling.');
+      alert(t.admin.courseInvite.updateAssignmentError);
     } finally {
       setIsUpdating(false);
     }
@@ -235,7 +239,7 @@ const ensureUserRoleForAssignment = (
       setSelectedUsers(new Set());
     } catch (err) {
       console.error('Bulk update failed', err);
-      alert('Noe gikk galt under masseoppdatering.');
+      alert(t.admin.courseInvite.bulkUpdateError);
     } finally {
       setIsUpdating(false);
     }
@@ -246,11 +250,11 @@ const ensureUserRoleForAssignment = (
   }
 
   if (courseLoading || modulesLoading || usersLoading) {
-    return <div className="p-8 text-center text-slate-500">Laster...</div>;
+    return <div className="p-8 text-center text-slate-500">{t.common.loading}</div>;
   }
 
   if (!course) {
-    return <div className="p-8 text-center text-red-500">Fant ikke kurset.</div>;
+    return <div className="p-8 text-center text-red-500">{t.admin.courseDetail.courseNotFound}</div>;
   }
 
   return (
@@ -261,21 +265,21 @@ const ensureUserRoleForAssignment = (
             onClick={() => router.back()} 
             className="mb-2 text-sm font-medium text-slate-500 hover:text-slate-900"
           >
-            ← Tilbake
+            ← {t.common.back}
           </button>
           <h1 className="text-2xl font-bold text-slate-900">
             {getLocalizedValue(course.title, 'no')}
           </h1>
-          <p className="text-slate-500">Administrer tilgang og se fremdrift</p>
+          <p className="text-slate-500">{t.admin.courseInvite.manageAccessSubtitle}</p>
         </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Påmelding med kode</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t.admin.courseInvite.signupWithCode}</h2>
             <p className="text-sm text-slate-500">
-              Del en kode slik at deltakere kan registrere seg selv til kurset.
+              {t.admin.courseInvite.shareCodeDescription}
             </p>
           </div>
           <button
@@ -283,29 +287,29 @@ const ensureUserRoleForAssignment = (
             disabled={creatingInvite}
             className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {creatingInvite ? 'Oppretter…' : 'Opprett kode'}
+            {creatingInvite ? t.admin.courseInvite.creating : t.admin.courseInvite.createCode}
           </button>
         </div>
 
         {inviteCode && (
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="text-sm font-semibold text-slate-700">Kurskode</div>
+            <div className="text-sm font-semibold text-slate-700">{t.admin.courseInvite.courseCode}</div>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
               <span className="rounded-lg bg-white px-3 py-2 font-semibold text-slate-900">
                 {inviteCode}
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy(inviteCode, 'Koden er kopiert.')}
+                onClick={() => handleCopy(inviteCode, t.admin.courseInvite.codeCopied)}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
               >
-                Kopier kode
+                {t.admin.courseInvite.copyCode}
               </button>
             </div>
             {inviteLink && (
               <div className="mt-3 text-sm text-slate-600">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Registreringslenke
+                  {t.admin.courseInvite.registrationLink}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="break-all rounded-lg bg-white px-3 py-2 text-xs text-slate-700">
@@ -313,10 +317,10 @@ const ensureUserRoleForAssignment = (
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(inviteLink, 'Lenken er kopiert.')}
+                    onClick={() => handleCopy(inviteLink, t.admin.courseInvite.linkCopied)}
                     className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
                   >
-                    Kopier lenke
+                    {t.admin.courseInvite.copyLink}
                   </button>
                 </div>
               </div>
@@ -335,7 +339,7 @@ const ensureUserRoleForAssignment = (
           <div className="flex items-center gap-2">
             <input 
               type="text" 
-              placeholder="Søk etter deltaker..." 
+              placeholder={t.admin.courseInvite.searchParticipant} 
               className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -343,20 +347,20 @@ const ensureUserRoleForAssignment = (
           </div>
           {selectedUsers.size > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">{selectedUsers.size} valgt</span>
-              <button 
+              <span className="text-sm text-slate-500">{t.admin.courseInvite.selectedCount(selectedUsers.size)}</span>
+              <button
                 onClick={() => handleBulkAssign(true)}
                 disabled={isUpdating}
                 className="rounded-xl bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-200 disabled:opacity-50"
               >
-                Gi tilgang
+                {t.admin.courseInvite.grantAccess}
               </button>
-              <button 
+              <button
                 onClick={() => handleBulkAssign(false)}
                 disabled={isUpdating}
                 className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
               >
-                Fjern tilgang
+                {t.admin.courseInvite.revokeAccess}
               </button>
             </div>
           )}
@@ -374,10 +378,10 @@ const ensureUserRoleForAssignment = (
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3">Deltaker</th>
-                <th className="px-4 py-3">Tilgang</th>
-                <th className="px-4 py-3">Fremdrift</th>
-                <th className="px-4 py-3 text-right">Handling</th>
+                <th className="px-4 py-3">{t.admin.courseInvite.participant}</th>
+                <th className="px-4 py-3">{t.admin.courseInvite.access}</th>
+                <th className="px-4 py-3">{t.admin.courseInvite.progress}</th>
+                <th className="px-4 py-3 text-right">{t.admin.courseInvite.action}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -411,11 +415,11 @@ const ensureUserRoleForAssignment = (
                     <td className="px-4 py-3">
                       {isAssigned ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                          Tildelt
+                          {t.admin.courseInvite.assigned}
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">
-                          Ikke tildelt
+                          {t.admin.courseInvite.notAssigned}
                         </span>
                       )}
                     </td>
@@ -430,7 +434,7 @@ const ensureUserRoleForAssignment = (
                         <span className="text-xs font-medium text-slate-600">{progressPercent}%</span>
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {completedCount} av {totalModules} moduler
+                        {t.admin.courseInvite.modulesProgress(completedCount, totalModules)}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -443,7 +447,7 @@ const ensureUserRoleForAssignment = (
                             : 'text-emerald-600 hover:text-emerald-700'
                         }`}
                       >
-                        {isAssigned ? 'Fjern tilgang' : 'Gi tilgang'}
+                        {isAssigned ? t.admin.courseInvite.revokeAccess : t.admin.courseInvite.grantAccess}
                       </button>
                     </td>
                   </tr>
@@ -452,7 +456,7 @@ const ensureUserRoleForAssignment = (
               {filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    Ingen brukere funnet.
+                    {t.admin.courseInvite.noUsersFound}
                   </td>
                 </tr>
               )}

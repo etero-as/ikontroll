@@ -4,19 +4,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useCustomer } from '@/hooks/useCustomer';
 import { useCourses } from '@/hooks/useCourses';
+import { getTranslation } from '@/utils/translations';
 
 const CourseCard = ({
   id,
   title,
   description,
   isAssigned,
+  accessLabel,
 }: {
   id: string;
   title: string;
   description: string;
   isAssigned: boolean;
+  accessLabel: string;
 }) => {
   if (!isAssigned) {
     return null;
@@ -33,7 +37,7 @@ const CourseCard = ({
           <p className="text-sm text-slate-500 line-clamp-2">{description}</p>
         </div>
         <span className="flex-shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-          Tilgang
+          {accessLabel}
         </span>
       </div>
     </Link>
@@ -42,6 +46,8 @@ const CourseCard = ({
 
 export default function CustomerCoursesPage() {
   const { activeCustomerId, isCustomerAdmin, customerMemberships, loading } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const router = useRouter();
 
   if (!loading && (!isCustomerAdmin || !activeCustomerId)) {
@@ -61,11 +67,11 @@ export default function CustomerCoursesPage() {
     <section className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Kursoversikt
+          {t.admin.customerCourses.pageSection}
         </p>
-        <h1 className="text-3xl font-semibold text-slate-900">Tilgjengelige kurs</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">{t.admin.customerCourses.pageTitle}</h1>
         <p className="text-sm text-slate-500">
-          Kurs knyttet til{' '}
+          {t.admin.customerCourses.coursesLinkedTo}{' '}
           <span className="font-semibold text-slate-900">
             {customer?.companyName ?? membership?.customerName ?? activeCustomerId ?? ''}
           </span>
@@ -74,7 +80,7 @@ export default function CustomerCoursesPage() {
 
       {visibleCourses.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500">
-          Ingen kurs er tilgjengelige for denne kunden ennå.
+          {t.admin.customerCourses.noCourses}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -84,8 +90,8 @@ export default function CustomerCoursesPage() {
               id={course.id}
               title={
                 typeof course.title === 'object'
-                  ? course.title.no ?? course.title.en ?? 'Uten tittel'
-                  : course.title ?? 'Uten tittel'
+                  ? course.title.no ?? course.title.en ?? t.common.untitled
+                  : course.title ?? t.common.untitled
               }
               description={
                 typeof course.description === 'object'
@@ -93,13 +99,14 @@ export default function CustomerCoursesPage() {
                   : course.description ?? ''
               }
               isAssigned
+              accessLabel={t.admin.customerCourses.accessBadge}
             />
           ))}
         </div>
       )}
 
       <p className="text-xs text-slate-400">
-        Klikk på et kurs for å administrere tildelinger og se fremdrift.
+        {t.admin.customerCourses.clickToManage}
       </p>
     </section>
   );

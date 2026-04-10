@@ -105,7 +105,7 @@ const getLocaleValue = (map: LocaleStringMap | undefined, lang = 'no') => {
   return firstEntry ?? '';
 };
 
-const buildDuplicateModuleTitle = (module: CourseModule | null, lang = 'no', copyOfLabel = 'Kopi av') => {
+const buildDuplicateModuleTitle = (module: CourseModule | null, lang = 'no', copyOfLabel: string) => {
   if (!module) return '';
   const baseTitle = getLocaleValue(module.title, lang).trim();
   return baseTitle ? `${copyOfLabel} ${baseTitle}` : copyOfLabel;
@@ -342,13 +342,13 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         setOrderingError(
           err instanceof Error
             ? err.message
-            : 'Kunne ikke oppdatere rekkefølgen.',
+            : t.admin.courseDetail.reorderError,
         );
       } finally {
         setOrdering(false);
       }
     },
-    [courseId],
+    [courseId, t.admin.courseDetail.reorderError],
   );
 
   const handleDragEnd = useCallback(
@@ -1570,13 +1570,13 @@ const DuplicateModuleModal = ({
     const currentTarget = form.getValues('targetCourseId');
     const fallbackCourseId = otherCourses[0]?.id ?? '';
     form.reset({
-      title: buildDuplicateModuleTitle(module, activeLanguage, t.admin.courseDetail.copyOfModule),
+      title: buildDuplicateModuleTitle(module, activeLanguage, t.admin.courseDetail.copyOfPrefix),
       mode: isNewModule ? 'same' : (currentMode ?? 'same'),
       targetCourseId: isNewModule
         ? fallbackCourseId
         : (currentTarget || fallbackCourseId),
     });
-  }, [module, activeLanguage, form, otherCourses, t.admin.courseDetail.copyOfModule]);
+  }, [module, activeLanguage, form, otherCourses, t.admin.courseDetail.copyOfPrefix]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     await onSubmit(values);

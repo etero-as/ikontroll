@@ -108,7 +108,7 @@ export default function ConsumerCourseView({
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Kunne ikke laste ned kursbevis.');
+        throw new Error(payload.error || t.courses.diplomaDownloadError);
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -122,12 +122,12 @@ export default function ConsumerCourseView({
     } catch (error) {
       console.error('Failed to download diploma', error);
       setDownloadError(
-        error instanceof Error ? error.message : 'Kunne ikke laste ned kursbevis.',
+        error instanceof Error ? error.message : t.courses.diplomaDownloadError,
       );
     } finally {
       setDownloading(false);
     }
-  }, [course.id, downloading, firebaseUser]);
+  }, [course.id, downloading, firebaseUser, t.courses.diplomaDownloadError]);
 
   const handleOpenModule = useCallback(
     (moduleId: string) => {
@@ -262,7 +262,7 @@ export default function ConsumerCourseView({
                   {t.modules.module} {index + 1}
                 </p>
                 <h3 className="text-lg font-semibold text-slate-900">
-                  {getLocalizedValue(module.title, locale) || 'Uten tittel'}
+                  {getLocalizedValue(module.title, locale) || t.common.untitled}
                 </h3>
                 {getLocalizedValue(module.summary, locale) && (
                   <p className="text-sm text-slate-600">

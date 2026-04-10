@@ -7,12 +7,16 @@ import ConsumerCourseView from '@/components/consumer/ConsumerCourseView';
 import { useCourseModules } from '@/hooks/useCourseModules';
 import { useCourse } from '@/hooks/useCourse';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export default function ConsumerCourseDetailPage() {
   const params = useParams();
   const courseId = params.courseId as string;
   const router = useRouter();
   const { profile, activeCustomerId, setActiveCustomerId } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   const memberships = (profile?.customerMemberships ?? []).filter(
     (membership) => (membership.assignedCourseIds ?? []).includes(courseId),
@@ -33,7 +37,7 @@ export default function ConsumerCourseDetailPage() {
   if (courseLoading || modulesLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Laster kurs …
+        {t.common.loading}
       </div>
     );
   }
@@ -42,12 +46,12 @@ export default function ConsumerCourseDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="space-y-4 rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-center text-sm text-red-600">
-          <p>Du har ikke tilgang til dette kurset.</p>
+          <p>{t.courses.noAccessToCourse}</p>
           <button
             onClick={() => router.replace('/my-courses')}
             className="rounded-full bg-red-600 px-4 py-2 text-white transition hover:bg-red-500"
           >
-            Tilbake til Mine kurs
+            {t.courses.backToMyCourses}
           </button>
         </div>
       </div>
@@ -58,7 +62,7 @@ export default function ConsumerCourseDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
-          {courseError ?? modulesError ?? 'Fant ikke kurset.'}
+          {courseError ?? modulesError ?? t.courses.courseNotFound}
         </div>
       </div>
     );

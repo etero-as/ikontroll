@@ -6,9 +6,13 @@ import { useRouter } from 'next/navigation';
 import { signInWithCustomToken } from 'firebase/auth';
 
 import { auth } from '@/lib/firebase';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export default function CourseSignupPage() {
   const router = useRouter();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -46,19 +50,19 @@ export default function CourseSignupPage() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || 'Kunne ikke opprette bruker.');
+        throw new Error(payload.error || t.auth.signupError);
       }
 
       const data = (await response.json().catch(() => ({}))) as { token?: string };
       if (!data.token) {
-        throw new Error('Mangler innloggingstoken.');
+        throw new Error(t.auth.missingToken);
       }
 
       await signInWithCustomToken(auth, data.token);
       router.replace('/my-courses');
     } catch (err) {
       console.error('Failed to sign up', err);
-      setError(err instanceof Error ? err.message : 'Kunne ikke opprette bruker.');
+      setError(err instanceof Error ? err.message : t.auth.signupError);
     } finally {
       setSubmitting(false);
     }
@@ -76,14 +80,14 @@ export default function CourseSignupPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             IKontroll
           </p>
-          <h1 className="text-2xl font-semibold text-slate-900">Registrer deg</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">{t.auth.signupTitle}</h1>
           <p className="text-sm text-slate-500">
-            Registrer deg med kurskoden du har fått fra arbeidsgiver.
+            {t.auth.signupSubtitle}
           </p>
         </div>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
-          Kurskode
+          {t.auth.courseCode}
           <input
             type="text"
             value={code}
@@ -94,7 +98,7 @@ export default function CourseSignupPage() {
         </label>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
-          E-post
+          {t.auth.email}
           <input
             type="email"
             value={email}
@@ -105,7 +109,7 @@ export default function CourseSignupPage() {
         </label>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
-          Telefon
+          {t.auth.phone}
           <input
             type="tel"
             value={phone}
@@ -116,7 +120,7 @@ export default function CourseSignupPage() {
         </label>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
-          Passord
+          {t.auth.password}
           <input
             type="password"
             value={password}
@@ -133,13 +137,13 @@ export default function CourseSignupPage() {
           disabled={submitting}
           className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
         >
-          {submitting ? 'Oppretter...' : 'Opprett konto'}
+          {submitting ? t.auth.signingUp : t.auth.signupButton}
         </button>
 
         <div className="text-center text-sm">
-          Allerede registrert?{' '}
+          {t.auth.alreadyRegistered}{' '}
           <Link href={loginHref} className="text-slate-600 underline transition hover:text-slate-900">
-            Logg inn her
+            {t.auth.loginHere}
           </Link>
         </div>
       </form>

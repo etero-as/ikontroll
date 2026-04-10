@@ -160,7 +160,7 @@ export function Topbar() {
                     (m) => m.customerId === activeCustomerId,
                   )?.customerName ??
                   activeCustomerId ??
-                  'Velg kunde'}
+                  t.admin.dashboard.selectCustomer}
               </span>
             </div>
           )}
