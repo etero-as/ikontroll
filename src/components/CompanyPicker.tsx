@@ -1,9 +1,13 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export const CompanyPicker = () => {
   const { profile, companyId, setCompanyId, isSystemOwner } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   if (!profile || !isSystemOwner) {
     return null;
@@ -21,10 +25,9 @@ export const CompanyPicker = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Velg selskap</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t.admin.companyPicker.title}</h2>
           <p className="text-sm text-slate-500">
-            Du er administrator i flere selskaper. Velg hvilket du vil styre
-            nå.
+            {t.admin.companyPicker.description}
           </p>
         </div>
 

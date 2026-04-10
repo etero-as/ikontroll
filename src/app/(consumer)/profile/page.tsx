@@ -98,7 +98,7 @@ function CompletedCoursesList({
     <>
       {isLoading && (
         <div className="py-4 text-center text-sm text-slate-400 animate-pulse">
-          Sjekker fullførte kurs...
+          {getTranslation(locale).profile.checkingCompletedCourses}
         </div>
       )}
       

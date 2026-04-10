@@ -1,6 +1,8 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export const CustomerPicker = () => {
   const {
@@ -9,6 +11,8 @@ export const CustomerPicker = () => {
     setActiveCustomerId,
     isCustomerAdmin,
   } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
 
   if (!isCustomerAdmin) {
     return null;
@@ -22,9 +26,9 @@ export const CustomerPicker = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Velg kunde</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t.admin.customerPicker.title}</h2>
           <p className="text-sm text-slate-500">
-            Du har administratortilgang til flere kunder. Velg hvilken du ønsker å administrere nå.
+            {t.admin.customerPicker.description}
           </p>
         </div>
 

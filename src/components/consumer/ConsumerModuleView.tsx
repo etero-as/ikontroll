@@ -41,17 +41,21 @@ const MediaImage = ({
   src,
   alt,
   className,
+  imageMissingLabel,
+  imageNotFoundLabel,
 }: {
   src: string;
   alt: string;
   className?: string;
+  imageMissingLabel?: string;
+  imageNotFoundLabel?: string;
 }) => {
   const [error, setError] = useState(false);
   if (error) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
-        <span className="text-3xl" role="img" aria-label="Bildet mangler">🖼️</span>
-        <p className="text-xs font-semibold">Bildet er ikke å finne</p>
+        <span className="text-3xl" role="img" aria-label={imageMissingLabel ?? 'Bildet mangler'}>🖼️</span>
+        <p className="text-xs font-semibold">{imageNotFoundLabel ?? 'Bildet er ikke å finne'}</p>
       </div>
     );
   }
@@ -690,7 +694,7 @@ export default function ConsumerModuleView({
                             {isYouTubeUrl(url) ? (
                               <iframe
                                 src={`${url}${url.includes('?') ? '&' : '?'}controls=0&modestbranding=1&playsinline=1&rel=0`}
-                                title="Modulvideo"
+                                title={t.modules.moduleVideo}
                                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
                                 className="h-full w-full pointer-events-none"
@@ -725,12 +729,12 @@ export default function ConsumerModuleView({
                         ) : hasAnnotationData ? (
                           <AnnotatedImage
                             src={url}
-                            alt="Modulbilde"
+                            alt={t.modules.moduleImage}
                             annotations={annotations}
                             className="h-full w-full"
                           />
                         ) : (
-                          <MediaImage src={url} alt="Modulbilde" className="h-full w-full object-contain" />
+                          <MediaImage src={url} alt={t.modules.moduleImage} className="h-full w-full object-contain" imageMissingLabel={t.modules.imageMissing} imageNotFoundLabel={t.modules.imageNotFound} />
                         )}
                       </div>
                       {caption && (
@@ -972,7 +976,7 @@ export default function ConsumerModuleView({
                           isYouTubeUrl(mediaPreview.url) ? (
                             <iframe
                               src={mediaPreview.url}
-                              title="Modulmedia"
+                              title={t.modules.moduleMedia}
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                               className="h-[80vh] w-full"
@@ -986,19 +990,19 @@ export default function ConsumerModuleView({
                         ) : mediaPreview.type === 'document' ? (
                           <iframe
                             src={mediaPreview.url}
-                            title="Moduldokument"
+                            title={t.modules.moduleDocument}
                             className="h-[80vh] w-full bg-white"
                           />
                         ) : previewImgError ? (
                           <div className="flex flex-col items-center justify-center gap-3 p-16 text-slate-400">
-                            <span className="text-5xl" role="img" aria-label="Bildet mangler">🖼️</span>
-                            <p className="text-sm font-semibold">Bildet er ikke å finne</p>
+                            <span className="text-5xl" role="img" aria-label={t.modules.imageMissing}>🖼️</span>
+                            <p className="text-sm font-semibold">{t.modules.imageNotFound}</p>
                           </div>
                         ) : mediaPreview.annotations?.length ? (
                           <div className="h-[85vh] w-full">
                             <AnnotatedImage
                               src={mediaPreview.url}
-                              alt="Modulbilde"
+                              alt={t.modules.moduleImage}
                               annotations={mediaPreview.annotations}
                               className="h-full w-full"
                             />
@@ -1006,7 +1010,7 @@ export default function ConsumerModuleView({
                         ) : (
                           <Image
                             src={mediaPreview.url}
-                            alt="Modulbilde"
+                            alt={t.modules.moduleImage}
                             width={0}
                             height={0}
                             sizes="100vw"

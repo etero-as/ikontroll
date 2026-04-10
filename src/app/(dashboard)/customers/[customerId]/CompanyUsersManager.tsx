@@ -31,6 +31,11 @@ const ensureNorwegianPhone = (input: string) => {
   return `+47${digits}`;
 };
 
+// TODO: i18n – These Zod validation messages are hardcoded in Norwegian because the schema is
+// defined at module level and cannot access React hooks (useLocale). To translate them, refactor
+// the schema into a factory function called inside the component, e.g.:
+//   const createUserSchema = (t: Translation) => z.object({ ... })
+// Translation keys are available at t.validation.*
 const nameField = z
   .string()
   .trim()

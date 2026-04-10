@@ -7,9 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 import { useCustomer } from '@/hooks/useCustomer';
 import { useCustomerSubunits } from '@/hooks/useCustomerSubunits';
 import { useCourses } from '@/hooks/useCourses';
+import { getTranslation } from '@/utils/translations';
 import type { Customer, CustomerPayload } from '@/types/customer';
 
 type BrregSuggestion = {
@@ -122,6 +124,8 @@ const ensureNorwegianPhone = (input?: string) => {
 
 export default function CustomerSubunitsPage() {
   const { activeCustomerId, isCustomerAdmin, customerMemberships, loading } = useAuth();
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const router = useRouter();
 
   useEffect(() => {
@@ -153,15 +157,15 @@ export default function CustomerSubunitsPage() {
     <section className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Underenheter
+          {t.admin.sidebar.nav.subunits}
         </p>
         <h1 className="text-3xl font-semibold text-slate-900">
-          Administrer underenheter
+          {t.admin.subunits.pageTitle}
         </h1>
         <p className="text-sm text-slate-500">
           {customerLoading
-            ? 'Laster kundedata …'
-            : `Aktiv kunde: ${customerName}`}
+            ? t.admin.subunits.loadingCustomer
+            : t.admin.subunits.activeCustomer(customerName)}
         </p>
       </div>
 
@@ -173,7 +177,7 @@ export default function CustomerSubunitsPage() {
 
       {!error && !customerLoading && !customer?.allowSubunits && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-          Denne kunden har ikke aktivert underenheter.
+          {t.admin.subunits.subunitsNotEnabled}
         </div>
       )}
 
@@ -185,6 +189,8 @@ export default function CustomerSubunitsPage() {
 }
 
 const SubunitManager = ({ customer }: { customer: Customer }) => {
+  const { locale } = useLocale();
+  const t = getTranslation(locale);
   const ownerCompanyId = customer.createdByCompanyId ?? null;
   const { courses } = useCourses(ownerCompanyId ?? null);
   const {
@@ -223,11 +229,11 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
   const createContactAdminUser = useCallback(
     async (customerId: string, password: string, values: CustomerFormValues) => {
       if (!ownerCompanyId) {
-        throw new Error('Systemeier mangler på kunden.');
+        throw new Error(t.admin.subunits.missingOwner);
       }
       const trimmedPassword = password.trim();
       if (!trimmedPassword) {
-        throw new Error('Passord for kontaktperson må fylles ut.');
+        throw new Error(t.admin.subunits.contactPasswordRequired);
       }
       const { firstName, lastName } = splitContactName(values.contactPerson);
       const normalizedPhone = ensureNorwegianPhone(values.contactPhone);
@@ -251,10 +257,10 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
       });
       if (!response.ok) {
         const message = await extractApiErrorMessage(response);
-        throw new Error(message ?? 'Kunne ikke opprette kontaktperson.');
+        throw new Error(message ?? t.admin.customers.cannotCreateContact);
       }
     },
-    [ownerCompanyId],
+    [ownerCompanyId, t.admin.subunits.missingOwner, t.admin.subunits.contactPasswordRequired, t.admin.customers.cannotCreateContact],
   );
 
   useEffect(() => {
@@ -302,7 +308,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
       } catch (err) {
         if (controller.signal.aborted) return;
         console.error('Brreg lookup failed', err);
-        setSuggestionError('Kunne ikke hente data fra Brreg');
+        setSuggestionError(t.admin.customers.brrregError);
         setSuggestions([]);
         setShowSuggestions(true);
       } finally {
@@ -314,7 +320,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [companyNameValue, isFormOpen]);
+  }, [companyNameValue, isFormOpen, t.admin.customers.brrregError]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -340,11 +346,11 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
           id: course.id,
           title:
             typeof course.title === 'object'
-              ? course.title.no ?? course.title.en ?? 'Uten tittel'
-              : course.title ?? 'Uten tittel',
+              ? course.title.no ?? course.title.en ?? t.common.untitled
+              : course.title ?? t.common.untitled,
         }))
         .sort((a, b) => a.title.localeCompare(b.title)),
-    [courses],
+    [courses, t.common.untitled],
   );
 
   const openCreate = () => {
@@ -433,12 +439,12 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
         await updateSubunit(editingCustomer.id, payload);
       } else {
         if (!ownerCompanyId) {
-          setFormError('Fant ikke tilknyttet systemeier.');
+          setFormError(t.admin.subunits.ownerNotFound);
           setBusy(false);
           return;
         }
         if (!contactPassword?.trim()) {
-          setFormError('Kontaktpersonens passord må fylles ut.');
+          setFormError(t.admin.subunits.contactPasswordRequired);
           setBusy(false);
           return;
         }
@@ -461,7 +467,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     } catch (err) {
       console.error('Failed to save subunit', err);
       setFormError(
-        err instanceof Error ? err.message : 'Kunne ikke lagre underenheten. Prøv igjen.',
+        err instanceof Error ? err.message : t.admin.subunits.saveError,
       );
     } finally {
       setBusy(false);
@@ -470,7 +476,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
 
   const handleDelete = async (subunit: Customer) => {
     const confirmed = window.confirm(
-      `Slett ${subunit.companyName}? Dette kan ikke angres.`,
+      t.admin.subunits.deleteConfirm(subunit.companyName),
     );
     if (!confirmed) return;
 
@@ -478,7 +484,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
       await deleteSubunit(subunit.id);
     } catch (err) {
       console.error('Failed to delete subunit', err);
-      alert('Kunne ikke slette underenheten.');
+      alert(t.admin.subunits.deleteError);
     }
   };
 
@@ -488,17 +494,17 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              Underenheter for {customer.companyName}
+              {t.admin.subunits.subunitsFor(customer.companyName)}
             </h2>
             <p className="text-sm text-slate-500">
-              Opprett og administrer foretak knyttet til denne kunden.
+              {t.admin.subunits.subtitle}
             </p>
           </div>
           <button
             onClick={openCreate}
             className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            + Ny underenhet
+            {t.admin.subunits.newSubunit}
           </button>
         </div>
 
@@ -510,22 +516,22 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
 
         {loading ? (
           <div className="flex items-center justify-center py-12 text-sm text-slate-500">
-            Laster underenheter …
+            {t.admin.subunits.loading}
           </div>
         ) : subunitsSorted.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-500">
-            Ingen underenheter registrert ennå.
+            {t.admin.subunits.noSubunits}
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="pb-2">Firma</th>
-                  <th className="pb-2">Kontakt</th>
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Org.nr</th>
-                  <th className="pb-2 text-right">Handlinger</th>
+                  <th className="pb-2">{t.admin.customers.company}</th>
+                  <th className="pb-2">{t.admin.customers.contact}</th>
+                  <th className="pb-2">{t.admin.customers.status}</th>
+                  <th className="pb-2">{t.admin.customers.orgNumber}</th>
+                  <th className="pb-2 text-right">{t.admin.customers.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -562,11 +568,11 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                         <span
                           className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}
                         >
-                          {subunit.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                          {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
                         </span>
                         {subunit.allowSubunits && (
                           <span className="text-xs font-semibold text-emerald-600">
-                            Underenheter
+                            {t.admin.customers.subunits}
                           </span>
                         )}
                       </div>
@@ -580,13 +586,13 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                           onClick={() => openEdit(subunit)}
                           className="flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
-                          Rediger
+                          {t.admin.customerDetail.users.editButton}
                         </button>
                         <button
                           onClick={() => handleDelete(subunit)}
                           className="flex h-9 items-center justify-center rounded-full border border-red-200 px-3 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
                         >
-                          Slett
+                          {t.common.remove}
                         </button>
                       </div>
                     </td>
@@ -604,18 +610,18 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                  {editingCustomer ? 'Rediger underenhet' : 'Ny underenhet'}
+                  {editingCustomer ? t.admin.subunits.editSubunit : t.admin.subunits.newSubunit}
                 </p>
                 <h3 className="text-2xl font-semibold text-slate-900">
                   {editingCustomer
                     ? editingCustomer.companyName
-                    : 'Kundeinformasjon'}
+                    : t.admin.customers.customerInfo}
                 </h3>
               </div>
               <button
                 onClick={closeForm}
                 className="text-slate-400 transition hover:text-slate-700"
-                aria-label="Lukk skjema"
+                aria-label={t.admin.customers.closeForm}
               >
                 ×
               </button>
@@ -634,9 +640,9 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2" ref={suggestionRef}>
                   <Field
-                    label="Firmanavn"
+                    label={t.admin.customers.companyName}
                     error={form.formState.errors.companyName?.message}
-                    hint="Søk henter data fra Brønnøysundregisteret"
+                    hint={t.admin.customers.companyNameHint}
                   >
                     <input
                       {...companyNameFieldProps}
@@ -657,7 +663,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                       <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                         {suggestionLoading && (
                           <p className="px-4 py-3 text-sm text-slate-500">
-                            Søker i Brreg …
+                            {t.admin.customers.searchingBrreg}
                           </p>
                         )}
                         {suggestionError && (
@@ -689,7 +695,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                                   {suggestion.companyName}
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                  Org.nr {suggestion.orgNumber}
+                                  {t.admin.customers.orgNumber} {suggestion.orgNumber}
                                 </span>
                                 {locationText && (
                                   <span className="text-xs text-slate-500">
@@ -703,7 +709,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                           !suggestionError &&
                           !suggestions.length && (
                             <p className="px-4 py-3 text-sm text-slate-500">
-                              Ingen treff
+                              {t.admin.customers.noResults}
                             </p>
                           )}
                       </div>
@@ -711,7 +717,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   )}
                 </div>
                 <Field
-                  label="Org.nr / VAT"
+                  label={t.admin.customers.orgVat}
                   error={form.formState.errors.vatNumber?.message}
                 >
                   <input
@@ -719,20 +725,20 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   />
                 </Field>
-                <Field label="Adresse" error={form.formState.errors.address?.message}>
+                <Field label={t.admin.customers.address} error={form.formState.errors.address?.message}>
                   <input
                     {...form.register('address')}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   />
                 </Field>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Postnr" error={form.formState.errors.zipno?.message}>
+                  <Field label={t.admin.customers.zipCode} error={form.formState.errors.zipno?.message}>
                     <input
                       {...form.register('zipno')}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
                   </Field>
-                  <Field label="Poststed" error={form.formState.errors.place?.message}>
+                  <Field label={t.admin.customers.city} error={form.formState.errors.place?.message}>
                     <input
                       {...form.register('place')}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
@@ -740,15 +746,15 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   </Field>
                 </div>
                 <Field
-                  label="Status"
+                  label={t.common.status}
                   error={form.formState.errors.status?.message}
                 >
                   <select
                     {...form.register('status')}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   >
-                    <option value="active">Aktiv</option>
-                    <option value="inactive">Inaktiv</option>
+                    <option value="active">{t.admin.customers.active}</option>
+                    <option value="inactive">{t.admin.customers.inactive}</option>
                   </select>
                 </Field>
                 <div className="md:col-span-2">
@@ -760,11 +766,10 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                     />
                     <div className="text-sm">
                       <p className="font-semibold text-slate-900">
-                        Underenhet kan opprette egne underenheter
+                        {t.admin.subunits.allowSubunitsLabel}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Når aktivert kan administratorene i denne underenheten legge til sine
-                        egne foretak.
+                        {t.admin.subunits.allowSubunitsHint}
                       </p>
                     </div>
                   </label>
@@ -773,7 +778,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Field
-                  label="Kontaktperson"
+                  label={t.admin.customers.contactPerson}
                   error={form.formState.errors.contactPerson?.message}
                 >
                   <input
@@ -782,7 +787,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   />
                 </Field>
                 <Field
-                  label="Telefon"
+                  label={t.admin.customers.phone}
                   error={form.formState.errors.contactPhone?.message}
                 >
                   <input
@@ -791,7 +796,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   />
                 </Field>
                 <Field
-                  label="E-post"
+                  label={t.admin.customers.email}
                   error={form.formState.errors.contactEmail?.message}
                 >
                   <input
@@ -802,7 +807,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                 </Field>
                 {!editingCustomer && (
                   <Field
-                    label="Passord for kontaktperson"
+                    label={t.admin.customers.password}
                     error={form.formState.errors.contactPassword?.message}
                   >
                     <input
@@ -815,14 +820,14 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
 
                 <div className="md:col-span-2">
                   <Field
-                    label="Tilgjengelige kurs"
-                    hint="Velg hvilke kurs underenheten skal ha tilgang til"
+                    label={t.admin.subunits.availableCourses}
+                    hint={t.admin.subunits.selectCoursesHint}
                     error={form.formState.errors.courseIds?.message}
                   >
                     <div className="flex flex-wrap gap-2">
                       {availableCourses.length === 0 && (
                         <p className="text-sm text-slate-500">
-                          Ingen kurs tilgjengelig for systemeier ennå.
+                          {t.admin.subunits.noCoursesAvailable}
                         </p>
                       )}
                       {availableCourses.map((course) => (
@@ -851,7 +856,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   disabled={busy}
                 >
-                  Avbryt
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
@@ -859,10 +864,10 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
                 >
                   {busy
-                    ? 'Lagrer …'
+                    ? t.admin.subunits.saving
                     : editingCustomer
-                      ? 'Oppdater underenhet'
-                      : 'Opprett underenhet'}
+                      ? t.admin.subunits.updateSubunit
+                      : t.admin.subunits.createSubunit}
                 </button>
               </div>
             </form>

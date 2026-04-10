@@ -112,7 +112,7 @@ const ConsumerNavbar = () => {
                 onClick={() => { handleSwitchToAdmin(); closeAvatarMenu(); }}
                 className="w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Adminvisning
+                {t.admin.topbar.goToAdminView}
               </button>
             )}
             <button
@@ -202,7 +202,7 @@ const ConsumerNavbar = () => {
                         }}
                         className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       >
-                        Gå til admin
+                        {t.admin.topbar.goToAdminView}
                       </button>
                     )}
             </div>
