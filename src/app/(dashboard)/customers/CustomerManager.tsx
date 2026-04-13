@@ -44,9 +44,15 @@ const extractApiErrorMessage = async (response: Response) => {
   } catch {
     // ignore JSON parse errors
   }
+  // TODO: i18n – use t.validation.serverError(response.status) once this helper is moved into a component context
   return text || `Serverfeil (${response.status})`;
 };
 
+// TODO: i18n – These Zod validation messages are hardcoded in Norwegian because the schema is
+// defined at module level and cannot access React hooks (useLocale). To translate them, refactor
+// the schema into a factory function called inside the component, e.g.:
+//   const createCustomerSchema = (t: Translation) => z.object({ ... })
+// Translation keys are available at t.validation.*
 const passwordSchema = z
   .string()
   .min(8, 'Passord må være minst 8 tegn')

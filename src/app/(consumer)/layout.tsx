@@ -7,6 +7,7 @@ import ConsumerNavbar from '@/components/consumer/ConsumerNavbar';
 import PortalModePrompt from '@/components/PortalModePrompt';
 import { useAuth } from '@/context/AuthContext';
 import { LocaleProvider } from '@/context/LocaleContext';
+import { getTranslation } from '@/utils/translations';
 
 export default function ConsumerLayout({
   children,
@@ -67,9 +68,10 @@ export default function ConsumerLayout({
   }, [isCustomerAdmin, isSystemOwner, loading, needsRoleChoice, portalMode, router]);
 
   if (loading) {
+    const t = getTranslation('no');
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
-        Laster ...
+        {t.common.loading}
       </div>
     );
   }
