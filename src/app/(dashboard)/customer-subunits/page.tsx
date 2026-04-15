@@ -339,9 +339,14 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     () => [...subunits].sort((a, b) => a.companyName.localeCompare(b.companyName)),
     [subunits],
   );
+  const customerCourseIds = useMemo(
+    () => new Set(customer.courseIds ?? []),
+    [customer.courseIds],
+  );
   const availableCourses = useMemo(
     () =>
       courses
+        .filter((course) => customerCourseIds.has(course.id))
         .map((course) => ({
           id: course.id,
           title:
@@ -350,7 +355,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
               : course.title ?? t.common.untitled,
         }))
         .sort((a, b) => a.title.localeCompare(b.title)),
-    [courses, t.common.untitled],
+    [courses, customerCourseIds, t.common.untitled],
   );
 
   const openCreate = () => {
@@ -654,6 +659,9 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                       }}
                       onFocus={() => {
                         if (suggestions.length) setShowSuggestions(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setShowSuggestions(false), 200);
                       }}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
