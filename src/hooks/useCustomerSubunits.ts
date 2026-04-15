@@ -38,7 +38,7 @@ export const useCustomerSubunits = (
   const collectionRef = useMemo(() => collection(db, 'customers'), []);
 
   useEffect(() => {
-    if (!parentCustomerId) {
+    if (!parentCustomerId || !ownerCompanyId) {
       startTransition(() => {
         setSubunits([]);
         setLoading(false);
@@ -51,15 +51,15 @@ export const useCustomerSubunits = (
       setLoading(true);
     });
 
-    const q = query(collectionRef, where('parentCustomerId', '==', parentCustomerId));
+    const q = query(collectionRef, where('createdByCompanyId', '==', ownerCompanyId));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const next: Customer[] = snapshot.docs.map((docSnap) => {
+        const all: Customer[] = snapshot.docs.map((docSnap) => {
           const data = docSnap.data();
           return {
             id: docSnap.id,
-            parentCustomerId: data.parentCustomerId ?? parentCustomerId,
+            parentCustomerId: data.parentCustomerId ?? null,
             parentCustomerName:
               typeof data.parentCustomerName === 'string'
                 ? data.parentCustomerName
@@ -83,7 +83,19 @@ export const useCustomerSubunits = (
             updatedAt: data.updatedAt?.toDate?.() ?? undefined,
           };
         });
-        setSubunits(next);
+
+        const descendantIds = new Set<string>();
+        const collectDescendants = (pid: string) => {
+          for (const c of all) {
+            if (c.parentCustomerId === pid && !descendantIds.has(c.id)) {
+              descendantIds.add(c.id);
+              collectDescendants(c.id);
+            }
+          }
+        };
+        collectDescendants(parentCustomerId);
+
+        setSubunits(all.filter((c) => descendantIds.has(c.id)));
         setLoading(false);
         setError(null);
       },
@@ -96,7 +108,7 @@ export const useCustomerSubunits = (
     );
 
     return () => unsubscribe();
-  }, [collectionRef, parentCustomerId]);
+  }, [collectionRef, parentCustomerId, ownerCompanyId]);
 
   const createSubunit = useCallback(
     async (payload: SubunitPayload) => {
