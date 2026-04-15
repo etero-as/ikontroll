@@ -434,6 +434,7 @@ export default function ModulePreviewPage({
     router.push(
       `/courses/${courseId}/modules/${targetModuleId}/preview?lang=${locale}`,
     );
+    window.scrollTo({ top: 0 });
   };
 
   const handleLocaleChange = (lang: string) => {
