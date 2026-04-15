@@ -218,7 +218,7 @@ export default function CompanyUsersManager({
       );
       const membershipRoles = membership?.roles ?? [];
       const roleLabels = membershipRoles.length
-        ? membershipRoles.map((role) => (role === 'admin' ? tu.roleAdmin : tu.roleUser)).join(', ')
+        ? membershipRoles.map((role) => (role === 'admin' ? tu.roleAdminLabel : tu.roleUserLabel)).join(', ')
         : tu.noRoles;
       const displayName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
       const primaryLabel = displayName || user.email;
