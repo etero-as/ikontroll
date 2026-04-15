@@ -690,11 +690,19 @@ export default function ModulePreviewPage({
             {moduleTitle}
           </h1>
 
+          {summary && (
+            <p className="mt-4 text-base text-slate-600">{summary}</p>
+          )}
+
+          {bodyHtmlWithExternalLinks && (
+            <div
+              className="prose prose-slate mt-4 max-w-none"
+              dangerouslySetInnerHTML={{ __html: bodyHtmlWithExternalLinks }}
+            />
+          )}
+
           {mediaItems.length > 0 && (
-            <div className="mt-6 space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {L.mediaGallery}
-              </p>
+            <div className="mt-6">
               <div className="flex gap-4 overflow-x-auto pb-2">
                 {mediaItems.map((item) => {
                   const isVideo = item.type === 'video';
@@ -773,21 +781,7 @@ export default function ModulePreviewPage({
               </div>
             </div>
           )}
-
-          {summary && (
-            <p className="mt-4 text-base text-slate-600">{summary}</p>
-          )}
         </div>
-
-      {bodyHtmlWithExternalLinks && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-          <h2 className="text-xl font-semibold text-slate-900">{L.content}</h2>
-          <div
-            className="prose prose-slate mt-4 max-w-none"
-            dangerouslySetInnerHTML={{ __html: bodyHtmlWithExternalLinks }}
-          />
-        </section>
-      )}
 
       {questions.length > 0 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
