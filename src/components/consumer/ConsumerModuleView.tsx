@@ -266,6 +266,7 @@ export default function ConsumerModuleView({
     router.push(
       `${basePath}/${course.id}/modules/${targetModuleId}?lang=${locale}`,
     );
+    window.scrollTo({ top: 0 });
   };
 
 
