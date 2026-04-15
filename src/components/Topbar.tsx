@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCustomer } from '@/hooks/useCustomer';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { saveLocale } from '@/utils/localization';
 import CourseEditBar from '@/components/AdminBar';
 
 type MenuPosition = { top: number; right: number };
@@ -132,6 +132,17 @@ export function Topbar() {
                 {portalMode === 'admin' ? t.admin.topbar.goToCourseView : t.admin.topbar.goToAdminView}
               </button>
             )}
+            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+              <span className="text-sm font-medium text-slate-700">{t.admin.topbar.language}</span>
+              <select
+                value={locale}
+                onChange={(e) => { saveLocale(e.target.value); setLocale(e.target.value); }}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              >
+                <option value="no">Norsk</option>
+                <option value="en">English</option>
+              </select>
+            </div>
             <button
               onClick={handleLogout}
               className="w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -166,7 +177,6 @@ export function Topbar() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <LanguageSwitcher locale={locale} onChange={setLocale} />
           <button
             ref={buttonRef}
             onClick={toggleMenu}
