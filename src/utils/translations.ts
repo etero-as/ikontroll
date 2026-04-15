@@ -171,6 +171,7 @@ export const translations = {
         myAccount: 'Min konto',
         goToCourseView: 'Gå til kursvisning',
         goToAdminView: 'Gå til adminvisning',
+        language: 'Språk',
         logout: 'Logg ut',
       },
       sidebar: {
@@ -952,6 +953,7 @@ export const translations = {
         myAccount: 'My account',
         goToCourseView: 'Go to course view',
         goToAdminView: 'Go to admin view',
+        language: 'Language',
         logout: 'Log out',
       },
       sidebar: {
