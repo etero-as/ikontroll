@@ -222,10 +222,10 @@ export default function MediaLibraryPage() {
       setAssets(loadedAssets);
       setFolders(loadedFolders);
 
-      // Backfill missing file sizes from Firebase Storage metadata
-      const missingSize = loadedAssets.filter((a) => !a.fileSize);
-      if (missingSize.length > 0) {
-        void backfillFileSizes(missingSize);
+      // Backfill missing file sizes and dates from Firebase Storage metadata
+      const missingMeta = loadedAssets.filter((a) => !a.fileSize || !a.createdAt);
+      if (missingMeta.length > 0) {
+        void backfillStorageMetadata(missingMeta);
       }
     } catch (err) {
       console.error('Failed to load media library', err);
@@ -234,27 +234,29 @@ export default function MediaLibraryPage() {
     }
   }, [companyId, ml.untitledFolder]);
 
-  const backfillFileSizes = useCallback(async (items: LibraryAsset[]) => {
-    const updates: Map<string, number> = new Map();
+  const backfillStorageMetadata = useCallback(async (items: LibraryAsset[]) => {
+    const updates = new Map<string, { fileSize?: number; createdAt?: number }>();
 
     await Promise.all(items.map(async (asset) => {
       const storagePath = storagePathFromUrl(asset.url);
       if (!storagePath) return;
       try {
         const meta = await getMetadata(ref(storage, storagePath));
-        if (meta.size) {
-          updates.set(asset.url, meta.size);
-          if (asset.libraryDocId) {
-            void updateDoc(doc(db, 'companyMedia', asset.libraryDocId), { fileSize: meta.size });
-          }
+        const patch: { fileSize?: number; createdAt?: number } = {};
+        if (meta.size && !asset.fileSize) patch.fileSize = meta.size;
+        if (meta.timeCreated && !asset.createdAt) patch.createdAt = new Date(meta.timeCreated).getTime();
+        if (Object.keys(patch).length === 0) return;
+        updates.set(asset.url, patch);
+        if (asset.libraryDocId) {
+          void updateDoc(doc(db, 'companyMedia', asset.libraryDocId), patch);
         }
       } catch { /* file may be inaccessible or deleted */ }
     }));
 
     if (updates.size > 0) {
       setAssets((prev) => prev.map((a) => {
-        const size = updates.get(a.url);
-        return size ? { ...a, fileSize: size } : a;
+        const patch = updates.get(a.url);
+        return patch ? { ...a, ...patch } : a;
       }));
     }
   }, []);
