@@ -13,7 +13,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, getMetadata, ref, uploadBytes } from 'firebase/storage';
 import { ChevronRight, FolderIcon, FolderPlus, ImageIcon, FileText, Film, Upload, Search, LayoutList, LayoutGrid } from 'lucide-react';
 
 import { db, storage } from '@/lib/firebase';
@@ -82,7 +82,7 @@ function storagePathFromUrl(url: string): string | null {
 function formatFileSize(bytes?: number): string {
   if (!bytes) return '—';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
@@ -218,14 +218,46 @@ export default function MediaLibraryPage() {
         }
       }
 
-      setAssets(Array.from(assetMap.values()));
+      const loadedAssets = Array.from(assetMap.values());
+      setAssets(loadedAssets);
       setFolders(loadedFolders);
+
+      // Backfill missing file sizes from Firebase Storage metadata
+      const missingSize = loadedAssets.filter((a) => !a.fileSize);
+      if (missingSize.length > 0) {
+        void backfillFileSizes(missingSize);
+      }
     } catch (err) {
       console.error('Failed to load media library', err);
     } finally {
       setLoading(false);
     }
   }, [companyId, ml.untitledFolder]);
+
+  const backfillFileSizes = useCallback(async (items: LibraryAsset[]) => {
+    const updates: Map<string, number> = new Map();
+
+    await Promise.all(items.map(async (asset) => {
+      const storagePath = storagePathFromUrl(asset.url);
+      if (!storagePath) return;
+      try {
+        const meta = await getMetadata(ref(storage, storagePath));
+        if (meta.size) {
+          updates.set(asset.url, meta.size);
+          if (asset.libraryDocId) {
+            void updateDoc(doc(db, 'companyMedia', asset.libraryDocId), { fileSize: meta.size });
+          }
+        }
+      } catch { /* file may be inaccessible or deleted */ }
+    }));
+
+    if (updates.size > 0) {
+      setAssets((prev) => prev.map((a) => {
+        const size = updates.get(a.url);
+        return size ? { ...a, fileSize: size } : a;
+      }));
+    }
+  }, []);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -983,7 +1015,7 @@ export default function MediaLibraryPage() {
                 className="grid grid-cols-[1fr_100px_80px_100px_100px] gap-2 border-b border-slate-100 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 <span>{ml.columnName}</span>
                 <span>{ml.columnType}</span>
-                <span>{ml.columnSize}</span>
+                <span className="text-right">{ml.columnSize}</span>
                 <span>{ml.columnUsedIn}</span>
                 <span>{ml.columnDate}</span>
               </div>
@@ -1048,7 +1080,7 @@ export default function MediaLibraryPage() {
                         )}
                       </div>
                       <span className="self-center text-xs text-slate-500">{typeLabel}</span>
-                      <span className="self-center text-xs text-slate-400">{item._kind === 'folder' ? '—' : formatFileSize((item as LibraryAsset).fileSize)}</span>
+                      <span className="self-center text-right text-xs text-slate-400">{item._kind === 'folder' ? '—' : formatFileSize((item as LibraryAsset).fileSize)}</span>
                       <span className="self-center text-xs text-slate-400">{usedIn}</span>
                       <span className="self-center text-xs text-slate-400">{createdAt}</span>
                     </div>
