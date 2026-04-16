@@ -14,7 +14,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { ChevronRight, FolderIcon, FolderPlus, ImageIcon, FileText, Film, Upload, Search } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderPlus, ImageIcon, FileText, Film, Upload, Search, LayoutList, LayoutGrid } from 'lucide-react';
 
 import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -51,6 +51,7 @@ type ListItem =
   | (LibraryAsset & { _kind: 'asset' });
 
 type FilterType = 'all' | 'image' | 'video' | 'document';
+type ViewMode = 'list' | 'grid';
 
 interface ContextMenuState {
   x: number;
@@ -115,6 +116,7 @@ export default function MediaLibraryPage() {
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ListItem | null>(null);
@@ -853,6 +855,22 @@ export default function MediaLibraryPage() {
             placeholder={ml.searchPlaceholder}
             className="w-64 rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
         </div>
+        <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1">
+          <button type="button" onClick={() => setViewMode('list')}
+            title={ml.viewList}
+            className={`cursor-pointer rounded-lg p-1.5 transition ${
+              viewMode === 'list' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+            }`}>
+            <LayoutList size={16} />
+          </button>
+          <button type="button" onClick={() => setViewMode('grid')}
+            title={ml.viewGrid}
+            className={`cursor-pointer rounded-lg p-1.5 transition ${
+              viewMode === 'grid' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+            }`}>
+            <LayoutGrid size={16} />
+          </button>
+        </div>
         {selectedIds.size > 0 && (
           <span className="text-xs font-medium text-slate-500">{ml.itemsSelected(selectedIds.size)}</span>
         )}
@@ -958,83 +976,150 @@ export default function MediaLibraryPage() {
           className={`rounded-2xl border bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200 ${
             dragOverId === '__table__' ? 'border-blue-300 ring-2 ring-blue-200' : 'border-slate-200'
           }`}>
-          {/* Table header */}
-          <div onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, item: null }); }}
-            className="grid grid-cols-[1fr_100px_80px_100px_100px] gap-2 border-b border-slate-100 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            <span>{ml.columnName}</span>
-            <span>{ml.columnType}</span>
-            <span>{ml.columnSize}</span>
-            <span>{ml.columnUsedIn}</span>
-            <span>{ml.columnDate}</span>
-          </div>
+          {viewMode === 'list' ? (
+            <>
+              {/* Table header */}
+              <div onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, item: null }); }}
+                className="grid grid-cols-[1fr_100px_80px_100px_100px] gap-2 border-b border-slate-100 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <span>{ml.columnName}</span>
+                <span>{ml.columnType}</span>
+                <span>{ml.columnSize}</span>
+                <span>{ml.columnUsedIn}</span>
+                <span>{ml.columnDate}</span>
+              </div>
 
-          {/* Rows */}
-          <div data-list-bg>
-            {listItems.map((item, index) => {
-              const itemId = item._kind === 'folder' ? item.id : ((item as LibraryAsset).libraryDocId ?? item.id);
-              const isSelected = selectedIds.has(itemId);
-              const isFocused = focusedIndex === index;
-              const isCut = cutIds.has(itemId);
-              const isDropTarget = dragOverId === itemId && item._kind === 'folder';
-              const name = getItemName(item);
+              {/* Rows */}
+              <div data-list-bg>
+                {listItems.map((item, index) => {
+                  const itemId = item._kind === 'folder' ? item.id : ((item as LibraryAsset).libraryDocId ?? item.id);
+                  const isSelected = selectedIds.has(itemId);
+                  const isFocused = focusedIndex === index;
+                  const isCut = cutIds.has(itemId);
+                  const isDropTarget = dragOverId === itemId && item._kind === 'folder';
+                  const name = getItemName(item);
 
-              const typeLabel = item._kind === 'folder' ? ml.folder
-                : item.type === 'video' ? ml.filterVideos
-                : item.type === 'document' ? ml.filterDocuments
-                : ml.filterImages;
+                  const typeLabel = item._kind === 'folder' ? ml.folder
+                    : item.type === 'video' ? ml.filterVideos
+                    : item.type === 'document' ? ml.filterDocuments
+                    : ml.filterImages;
 
-              const usedIn = item._kind === 'folder' ? '—' : ml.usedInModules((item as LibraryAsset).moduleRefs.length);
-              const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+                  const usedIn = item._kind === 'folder' ? '—' : ml.usedInModules((item as LibraryAsset).moduleRefs.length);
+                  const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-              return (
-                <div key={itemId}
-                  {...(item._kind === 'folder' ? { 'data-folder-id': itemId } : {})}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  onDragEnter={(e) => e.preventDefault()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={(e) => handleRowClick(e, item, index)}
-                  onDoubleClick={() => handleRowDoubleClick(item)}
-                  onContextMenu={(e) => handleContextMenu(e, item, index)}
-                  className={`grid cursor-default select-none grid-cols-[1fr_100px_80px_100px_100px] gap-2 border-b border-slate-50 px-4 py-2 text-sm transition-colors
-                    ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}
-                    ${isFocused ? 'ring-1 ring-inset ring-blue-300' : ''}
-                    ${isCut ? 'opacity-50' : ''}
-                    ${isDropTarget ? 'bg-blue-100 ring-2 ring-blue-300' : ''}
-                  `}>
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                  return (
+                    <div key={itemId}
+                      {...(item._kind === 'folder' ? { 'data-folder-id': itemId } : {})}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      onDragEnter={(e) => e.preventDefault()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onClick={(e) => handleRowClick(e, item, index)}
+                      onDoubleClick={() => handleRowDoubleClick(item)}
+                      onContextMenu={(e) => handleContextMenu(e, item, index)}
+                      className={`grid cursor-default select-none grid-cols-[1fr_100px_80px_100px_100px] gap-2 border-b border-slate-50 px-4 py-2 text-sm transition-colors
+                        ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}
+                        ${isFocused ? 'ring-1 ring-inset ring-blue-300' : ''}
+                        ${isCut ? 'opacity-50' : ''}
+                        ${isDropTarget ? 'bg-blue-100 ring-2 ring-blue-300' : ''}
+                      `}>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                          {item._kind === 'asset' && item.type === 'image' ? (
+                            <Image src={item.url} alt={name} width={36} height={36}
+                              className="h-9 w-9 rounded object-cover" />
+                          ) : (
+                            getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)
+                          )}
+                        </span>
+                        {renamingId === itemId ? (
+                          <input ref={renameInputRef}
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => void handleRenameSubmit()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') void handleRenameSubmit();
+                              if (e.key === 'Escape') setRenamingId(null);
+                              e.stopPropagation();
+                            }}
+                            className="min-w-0 flex-1 rounded border border-blue-300 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            onClick={(e) => e.stopPropagation()} />
+                        ) : (
+                          <span className="truncate text-slate-700" title={name}>{name}</span>
+                        )}
+                      </div>
+                      <span className="self-center text-xs text-slate-500">{typeLabel}</span>
+                      <span className="self-center text-xs text-slate-400">{item._kind === 'folder' ? '—' : formatFileSize((item as LibraryAsset).fileSize)}</span>
+                      <span className="self-center text-xs text-slate-400">{usedIn}</span>
+                      <span className="self-center text-xs text-slate-400">{createdAt}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            /* Grid view */
+            <div data-list-bg className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 p-3">
+              {listItems.map((item, index) => {
+                const itemId = item._kind === 'folder' ? item.id : ((item as LibraryAsset).libraryDocId ?? item.id);
+                const isSelected = selectedIds.has(itemId);
+                const isFocused = focusedIndex === index;
+                const isCut = cutIds.has(itemId);
+                const isDropTarget = dragOverId === itemId && item._kind === 'folder';
+                const name = getItemName(item);
+
+                return (
+                  <div key={itemId}
+                    {...(item._kind === 'folder' ? { 'data-folder-id': itemId } : {})}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, item)}
+                    onDragEnter={(e) => e.preventDefault()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={(e) => handleRowClick(e, item, index)}
+                    onDoubleClick={() => handleRowDoubleClick(item)}
+                    onContextMenu={(e) => handleContextMenu(e, item, index)}
+                    className={`group flex cursor-default select-none flex-col overflow-hidden rounded-xl border transition-colors
+                      ${isSelected ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}
+                      ${isFocused ? 'ring-2 ring-blue-300' : ''}
+                      ${isCut ? 'opacity-50' : ''}
+                      ${isDropTarget ? 'border-blue-400 bg-blue-100 ring-2 ring-blue-300' : ''}
+                    `}>
+                    <div className="flex aspect-square items-center justify-center overflow-hidden bg-slate-50">
                       {item._kind === 'asset' && item.type === 'image' ? (
-                        <Image src={item.url} alt={name} width={36} height={36}
-                          className="h-9 w-9 rounded object-cover" />
+                        <Image src={item.url} alt={name} width={320} height={320}
+                          className="h-full w-full object-cover" />
+                      ) : item._kind === 'asset' && item.type === 'video' ? (
+                        <Film size={40} className="text-purple-300" />
+                      ) : item._kind === 'folder' ? (
+                        <FolderIcon size={40} className="text-amber-300" />
                       ) : (
-                        getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)
+                        <FileText size={40} className="text-red-300" />
                       )}
-                    </span>
-                    {renamingId === itemId ? (
-                      <input ref={renameInputRef}
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={() => void handleRenameSubmit()}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void handleRenameSubmit();
-                          if (e.key === 'Escape') setRenamingId(null);
-                          e.stopPropagation();
-                        }}
-                        className="min-w-0 flex-1 rounded border border-blue-300 px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-                        onClick={(e) => e.stopPropagation()} />
-                    ) : (
-                      <span className="truncate text-slate-700" title={name}>{name}</span>
-                    )}
+                    </div>
+                    <div className="flex flex-col gap-0.5 px-2.5 py-2">
+                      {renamingId === itemId ? (
+                        <input ref={renameInputRef}
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => void handleRenameSubmit()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void handleRenameSubmit();
+                            if (e.key === 'Escape') setRenamingId(null);
+                            e.stopPropagation();
+                          }}
+                          className="min-w-0 rounded border border-blue-300 px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          onClick={(e) => e.stopPropagation()} />
+                      ) : (
+                        <span className="truncate text-xs font-medium text-slate-700" title={name}>{name}</span>
+                      )}
+                      <span className="truncate text-[10px] text-slate-400">
+                        {item._kind === 'folder' ? ml.folder : formatFileSize((item as LibraryAsset).fileSize)}
+                      </span>
+                    </div>
                   </div>
-                  <span className="self-center text-xs text-slate-500">{typeLabel}</span>
-                  <span className="self-center text-xs text-slate-400">{item._kind === 'folder' ? '—' : formatFileSize((item as LibraryAsset).fileSize)}</span>
-                  <span className="self-center text-xs text-slate-400">{usedIn}</span>
-                  <span className="self-center text-xs text-slate-400">{createdAt}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

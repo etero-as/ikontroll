@@ -232,6 +232,8 @@ export const translations = {
         cut: 'Klipp ut',
         paste: 'Lim inn',
         home: 'Hjem',
+        viewList: 'Listevisning',
+        viewGrid: 'Rutenettvisning',
         itemsSelected: (n: number) => n === 1 ? '1 element valgt' : `${n} elementer valgt`,
       },
       brokenMedia: {
@@ -1036,6 +1038,8 @@ export const translations = {
         cut: 'Cut',
         paste: 'Paste',
         home: 'Home',
+        viewList: 'List view',
+        viewGrid: 'Grid view',
         itemsSelected: (n: number) => n === 1 ? '1 item selected' : `${n} items selected`,
       },
       brokenMedia: {
