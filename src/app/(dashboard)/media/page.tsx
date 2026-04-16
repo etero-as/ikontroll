@@ -222,8 +222,8 @@ export default function MediaLibraryPage() {
       setAssets(loadedAssets);
       setFolders(loadedFolders);
 
-      // Backfill missing file sizes and dates from Firebase Storage metadata
-      const missingMeta = loadedAssets.filter((a) => !a.fileSize || !a.createdAt);
+      // Backfill missing metadata from Firebase Storage
+      const missingMeta = loadedAssets.filter((a) => !a.fileSize || !a.createdAt || !a.displayName);
       if (missingMeta.length > 0) {
         void backfillStorageMetadata(missingMeta);
       }
@@ -235,16 +235,21 @@ export default function MediaLibraryPage() {
   }, [companyId, ml.untitledFolder]);
 
   const backfillStorageMetadata = useCallback(async (items: LibraryAsset[]) => {
-    const updates = new Map<string, { fileSize?: number; createdAt?: number }>();
+    const updates = new Map<string, { fileSize?: number; createdAt?: number; displayName?: string }>();
 
     await Promise.all(items.map(async (asset) => {
       const storagePath = storagePathFromUrl(asset.url);
       if (!storagePath) return;
       try {
         const meta = await getMetadata(ref(storage, storagePath));
-        const patch: { fileSize?: number; createdAt?: number } = {};
+        const patch: { fileSize?: number; createdAt?: number; displayName?: string } = {};
         if (meta.size && !asset.fileSize) patch.fileSize = meta.size;
         if (meta.timeCreated && !asset.createdAt) patch.createdAt = new Date(meta.timeCreated).getTime();
+        if (!asset.displayName) {
+          const rawName = meta.name.split('/').pop() ?? '';
+          const cleaned = rawName.replace(/^\d{10,}-/, '');
+          if (cleaned) patch.displayName = cleaned;
+        }
         if (Object.keys(patch).length === 0) return;
         updates.set(asset.url, patch);
         if (asset.libraryDocId) {
