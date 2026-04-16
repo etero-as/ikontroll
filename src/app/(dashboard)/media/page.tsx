@@ -1003,7 +1003,14 @@ export default function MediaLibraryPage() {
                     ${isDropTarget ? 'bg-blue-100 ring-2 ring-blue-300' : ''}
                   `}>
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <span className="shrink-0">{getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)}</span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                      {item._kind === 'asset' && item.type === 'image' ? (
+                        <Image src={item.url} alt={name} width={36} height={36}
+                          className="h-9 w-9 rounded object-cover" />
+                      ) : (
+                        getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)
+                      )}
+                    </span>
                     {renamingId === itemId ? (
                       <input ref={renameInputRef}
                         value={renameValue}
