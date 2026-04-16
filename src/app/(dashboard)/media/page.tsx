@@ -35,6 +35,7 @@ interface LibraryAsset extends ModuleMediaPoolItem {
   displayName?: string;
   createdAt?: number;
   fileSize?: number;
+  moduleRefCount?: number;
 }
 
 interface FolderItem {
@@ -133,6 +134,7 @@ export default function MediaLibraryPage() {
   const [mediaPreview, setMediaPreview] = useState<LibraryAsset | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
+  const [syncingRefs, setSyncingRefs] = useState(false);
 
   const replaceInputRef = useRef<HTMLInputElement | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -140,14 +142,103 @@ export default function MediaLibraryPage() {
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---- Load assets + folders ---- */
-  const load = useCallback(async () => {
+  /* ---- Load folder contents (scoped query) ---- */
+  const loadFolder = useCallback(async (folderId: string | null) => {
     if (!companyId) { setAssets([]); setFolders([]); setLoading(false); return; }
     setLoading(true);
     try {
-      const assetMap = new Map<string, LibraryAsset>();
+      const mediaCol = collection(db, 'companyMedia');
 
-      // 1. Scan all module pools
+      const [foldersSnap, assetsSnap] = await Promise.all([
+        getDocs(query(mediaCol,
+          where('companyId', '==', companyId),
+          where('type', '==', 'folder'),
+          where('parentFolderId', '==', folderId),
+        )),
+        getDocs(query(mediaCol,
+          where('companyId', '==', companyId),
+          where('folderId', '==', folderId),
+        )),
+      ]);
+
+      const loadedFolders: FolderItem[] = [];
+      for (const d of foldersSnap.docs) {
+        const data = d.data();
+        loadedFolders.push({
+          id: d.id,
+          name: data.name ?? ml.untitledFolder,
+          parentFolderId: data.parentFolderId ?? null,
+          companyId: data.companyId,
+          createdAt: data.createdAt ?? 0,
+          type: 'folder',
+        });
+      }
+
+      const loadedAssets: LibraryAsset[] = [];
+      for (const d of assetsSnap.docs) {
+        const data = d.data();
+        if (data.type === 'folder') continue;
+        loadedAssets.push({
+          id: data.id ?? d.id,
+          url: data.url,
+          type: data.type ?? 'image',
+          moduleRefs: [],
+          source: 'library',
+          libraryDocId: d.id,
+          folderId: data.folderId ?? null,
+          displayName: data.displayName,
+          createdAt: data.createdAt,
+          fileSize: data.fileSize,
+          moduleRefCount: data.moduleRefCount,
+        });
+      }
+
+      setFolders(loadedFolders);
+      setAssets(loadedAssets);
+
+      const missingMeta = loadedAssets.filter((a) => !a.fileSize || !a.createdAt || !a.displayName);
+      if (missingMeta.length > 0) {
+        void backfillStorageMetadata(missingMeta);
+      }
+    } catch (err) {
+      console.error('Failed to load media library', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [companyId, ml.untitledFolder]);
+
+  /* ---- Load all ancestor folders for breadcrumb ---- */
+  const [allFolders, setAllFolders] = useState<FolderItem[]>([]);
+
+  const loadAllFolders = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'companyMedia'),
+        where('companyId', '==', companyId),
+        where('type', '==', 'folder'),
+      ));
+      setAllFolders(snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name ?? ml.untitledFolder,
+          parentFolderId: data.parentFolderId ?? null,
+          companyId: data.companyId,
+          createdAt: data.createdAt ?? 0,
+          type: 'folder' as const,
+        };
+      }));
+    } catch { /* ignore */ }
+  }, [companyId, ml.untitledFolder]);
+
+  /* ---- Deferred module scan ---- */
+  const loadModuleRefs = useCallback(async () => {
+    if (!companyId) return;
+    setSyncingRefs(true);
+    try {
+      const refMap = new Map<string, { moduleId: string; courseId: string }[]>();
+
       const coursesSnap = await getDocs(
         query(collection(db, 'courses'), where('companyId', '==', companyId)),
       );
@@ -164,137 +255,140 @@ export default function MediaLibraryPage() {
             poolItems = normalizeToPoolModel(media, data.mediaSync).pool;
           }
           for (const item of poolItems) {
-            const existing = assetMap.get(item.url);
+            const existing = refMap.get(item.url);
             if (existing) {
-              if (!existing.moduleRefs.some((r) => r.moduleId === modDoc.id)) {
-                existing.moduleRefs.push({ moduleId: modDoc.id, courseId });
+              if (!existing.some((r) => r.moduleId === modDoc.id)) {
+                existing.push({ moduleId: modDoc.id, courseId });
               }
             } else {
-              assetMap.set(item.url, { ...item, moduleRefs: [{ moduleId: modDoc.id, courseId }], source: 'module' });
+              refMap.set(item.url, [{ moduleId: modDoc.id, courseId }]);
             }
           }
         }
       }
 
-      // 2. Standalone library uploads
-      const libSnap = await getDocs(
-        query(collection(db, 'companyMedia'), where('companyId', '==', companyId)),
-      );
-      const loadedFolders: FolderItem[] = [];
-      for (const libDoc of libSnap.docs) {
-        const data = libDoc.data();
-        if (data.type === 'folder') {
-          loadedFolders.push({
-            id: libDoc.id,
-            name: data.name ?? ml.untitledFolder,
-            parentFolderId: data.parentFolderId ?? null,
-            companyId: data.companyId,
-            createdAt: data.createdAt ?? 0,
-            type: 'folder',
-          });
-          continue;
-        }
-        const assetData = data as { url: string; type: ModuleMediaType; id: string; folderId?: string; displayName?: string; createdAt?: number; fileSize?: number };
-        if (!assetMap.has(assetData.url)) {
-          assetMap.set(assetData.url, {
-            id: assetData.id ?? libDoc.id,
-            url: assetData.url,
-            type: assetData.type ?? 'image',
-            moduleRefs: [],
-            source: 'library',
-            libraryDocId: libDoc.id,
-            folderId: assetData.folderId ?? null,
-            displayName: assetData.displayName,
-            createdAt: assetData.createdAt,
-            fileSize: assetData.fileSize,
-          });
-        } else {
-          const existing = assetMap.get(assetData.url)!;
-          existing.libraryDocId = libDoc.id;
-          if (assetData.folderId) existing.folderId = assetData.folderId;
-          if (assetData.displayName) existing.displayName = assetData.displayName;
-          if (assetData.createdAt) existing.createdAt = assetData.createdAt;
-          if (assetData.fileSize) existing.fileSize = assetData.fileSize;
+      // Promote module-only assets: create companyMedia docs for URLs not yet in the library
+      const existingUrls = new Set<string>();
+      const libSnap = await getDocs(query(
+        collection(db, 'companyMedia'),
+        where('companyId', '==', companyId),
+      ));
+      for (const d of libSnap.docs) {
+        const data = d.data();
+        if (data.url) existingUrls.add(data.url);
+      }
+
+      for (const [url, refs] of refMap) {
+        if (existingUrls.has(url)) continue;
+        const firstRef = refs[0];
+        if (!firstRef) continue;
+        const newId = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+        const type: ModuleMediaType = url.match(/\.(mp4|webm|mov)(\?|$)/i) ? 'video'
+          : url.match(/\.pdf(\?|$)/i) ? 'document' : 'image';
+        await setDoc(doc(db, 'companyMedia', newId), {
+          id: newId, companyId, url, type,
+          createdAt: Date.now(),
+          folderId: null,
+          displayName: getFileNameFromUrl(url),
+          moduleRefCount: refs.length,
+        });
+      }
+
+      // Persist moduleRefCount on existing docs and merge into state
+      for (const d of libSnap.docs) {
+        const data = d.data();
+        if (!data.url || data.type === 'folder') continue;
+        const refs = refMap.get(data.url);
+        const count = refs?.length ?? 0;
+        if (data.moduleRefCount !== count) {
+          void updateDoc(doc(db, 'companyMedia', d.id), { moduleRefCount: count });
         }
       }
 
-      const loadedAssets = Array.from(assetMap.values());
-      setAssets(loadedAssets);
-      setFolders(loadedFolders);
-
-      // Backfill missing metadata from Firebase Storage
-      const missingMeta = loadedAssets.filter((a) => !a.fileSize || !a.createdAt || !a.displayName);
-      if (missingMeta.length > 0) {
-        void backfillStorageMetadata(missingMeta);
-      }
+      setAssets((prev) => prev.map((a) => {
+        const refs = refMap.get(a.url);
+        return refs
+          ? { ...a, moduleRefs: refs, moduleRefCount: refs.length }
+          : { ...a, moduleRefs: [], moduleRefCount: 0 };
+      }));
     } catch (err) {
-      console.error('Failed to load media library', err);
+      console.error('Failed to sync module refs', err);
     } finally {
-      setLoading(false);
+      setSyncingRefs(false);
     }
-  }, [companyId, ml.untitledFolder]);
+  }, [companyId]);
 
+  /* ---- Batch metadata backfill (chunks of 5) ---- */
   const backfillStorageMetadata = useCallback(async (items: LibraryAsset[]) => {
+    const CHUNK_SIZE = 5;
     const updates = new Map<string, { fileSize?: number; createdAt?: number; displayName?: string }>();
 
-    await Promise.all(items.map(async (asset) => {
-      const storagePath = storagePathFromUrl(asset.url);
-      if (!storagePath) return;
-      try {
-        const meta = await getMetadata(ref(storage, storagePath));
-        const patch: { fileSize?: number; createdAt?: number; displayName?: string } = {};
-        if (meta.size && !asset.fileSize) patch.fileSize = meta.size;
-        if (meta.timeCreated && !asset.createdAt) patch.createdAt = new Date(meta.timeCreated).getTime();
-        if (!asset.displayName) {
-          const rawName = meta.name.split('/').pop() ?? '';
-          const cleaned = rawName.replace(/^\d{10,}-/, '');
-          if (cleaned) patch.displayName = cleaned;
-        }
-        if (Object.keys(patch).length === 0) return;
-        updates.set(asset.url, patch);
-        if (asset.libraryDocId) {
-          void updateDoc(doc(db, 'companyMedia', asset.libraryDocId), patch);
-        }
-      } catch { /* file may be inaccessible or deleted */ }
-    }));
-
-    if (updates.size > 0) {
-      setAssets((prev) => prev.map((a) => {
-        const patch = updates.get(a.url);
-        return patch ? { ...a, ...patch } : a;
+    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+      const chunk = items.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(async (asset) => {
+        const storagePath = storagePathFromUrl(asset.url);
+        if (!storagePath) return;
+        try {
+          const meta = await getMetadata(ref(storage, storagePath));
+          const patch: { fileSize?: number; createdAt?: number; displayName?: string } = {};
+          if (meta.size && !asset.fileSize) patch.fileSize = meta.size;
+          if (meta.timeCreated && !asset.createdAt) patch.createdAt = new Date(meta.timeCreated).getTime();
+          if (!asset.displayName) {
+            const rawName = meta.name.split('/').pop() ?? '';
+            const cleaned = rawName.replace(/^\d{10,}-/, '');
+            if (cleaned) patch.displayName = cleaned;
+          }
+          if (Object.keys(patch).length === 0) return;
+          updates.set(asset.url, patch);
+          if (asset.libraryDocId) {
+            void updateDoc(doc(db, 'companyMedia', asset.libraryDocId), patch);
+          }
+        } catch { /* file may be inaccessible or deleted */ }
       }));
+
+      if (updates.size > 0) {
+        const snapshot = new Map(updates);
+        setAssets((prev) => prev.map((a) => {
+          const patch = snapshot.get(a.url);
+          return patch ? { ...a, ...patch } : a;
+        }));
+      }
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  /* ---- Trigger loads ---- */
+  useEffect(() => { void loadFolder(currentFolderId); }, [currentFolderId, loadFolder]);
+  useEffect(() => { void loadAllFolders(); }, [loadAllFolders]);
+  useEffect(() => { void loadModuleRefs(); }, [loadModuleRefs]);
+
+  const reload = useCallback(() => {
+    void loadFolder(currentFolderId);
+    void loadAllFolders();
+  }, [currentFolderId, loadFolder, loadAllFolders]);
 
   /* ---- Breadcrumb path ---- */
   const breadcrumbPath = useMemo(() => {
     const path: FolderItem[] = [];
     let fId = currentFolderId;
     while (fId) {
-      const folder = folders.find((f) => f.id === fId);
+      const folder = allFolders.find((f) => f.id === fId);
       if (!folder) break;
       path.unshift(folder);
       fId = folder.parentFolderId;
     }
     return path;
-  }, [currentFolderId, folders]);
+  }, [currentFolderId, allFolders]);
 
   /* ---- Filtered + scoped list ---- */
   const listItems = useMemo(() => {
     const items: ListItem[] = [];
 
-    // Folders in current directory
-    const currentFolders = folders
-      .filter((f) => f.parentFolderId === currentFolderId)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    for (const f of currentFolders) {
+    const sortedFolders = [...folders].sort((a, b) => a.name.localeCompare(b.name));
+    for (const f of sortedFolders) {
       items.push({ ...f, _kind: 'folder' });
     }
 
-    // Assets in current directory
-    let currentAssets = assets.filter((a) => (a.folderId ?? null) === currentFolderId);
+    let currentAssets = [...assets];
     if (filter !== 'all') currentAssets = currentAssets.filter((a) => a.type === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -305,7 +399,7 @@ export default function MediaLibraryPage() {
     }
 
     return items;
-  }, [assets, folders, currentFolderId, filter, search]);
+  }, [assets, folders, filter, search]);
 
   /* ---- Delete ---- */
   const handleDeleteAsset = useCallback(async (asset: LibraryAsset) => {
@@ -362,31 +456,39 @@ export default function MediaLibraryPage() {
   const handleDeleteFolder = useCallback(async (folder: FolderItem) => {
     setDeleting(true);
     try {
-      // Recursively collect all descendant folder IDs
       const allFolderIds = new Set<string>();
       const collectDescendants = (parentId: string) => {
         allFolderIds.add(parentId);
-        for (const f of folders) {
+        for (const f of allFolders) {
           if (f.parentFolderId === parentId) collectDescendants(f.id);
         }
       };
       collectDescendants(folder.id);
 
-      // Delete all assets in these folders
-      for (const asset of assets) {
-        if (asset.folderId && allFolderIds.has(asset.folderId)) {
-          await handleDeleteAsset(asset);
+      // Load and delete all assets in descendant folders
+      for (const fId of allFolderIds) {
+        const snap = await getDocs(query(
+          collection(db, 'companyMedia'),
+          where('companyId', '==', companyId),
+          where('folderId', '==', fId),
+        ));
+        for (const d of snap.docs) {
+          const data = d.data();
+          if (data.type === 'folder') continue;
+          await handleDeleteAsset({
+            id: data.id ?? d.id, url: data.url, type: data.type ?? 'image',
+            moduleRefs: [], source: 'library', libraryDocId: d.id,
+          });
         }
       }
 
-      // Delete all folder docs
       for (const fId of allFolderIds) {
         await deleteDoc(doc(db, 'companyMedia', fId));
       }
     } catch (err) {
       console.error('Delete folder failed', err);
     }
-  }, [folders, assets, handleDeleteAsset]);
+  }, [allFolders, companyId, handleDeleteAsset]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -398,13 +500,13 @@ export default function MediaLibraryPage() {
         await handleDeleteAsset(deleteTarget);
       }
       setDeleteTarget(null);
-      await load();
+      reload();
     } catch (err) {
       console.error('Delete failed', err);
     } finally {
       setDeleting(false);
     }
-  }, [deleteTarget, handleDeleteAsset, handleDeleteFolder, load]);
+  }, [deleteTarget, handleDeleteAsset, handleDeleteFolder, reload]);
 
   /* ---- Upload ---- */
   const handleUpload = useCallback(async (file: File, targetFolderId?: string | null) => {
@@ -425,13 +527,13 @@ export default function MediaLibraryPage() {
         displayName: file.name,
         fileSize: file.size,
       });
-      await load();
+      reload();
     } catch (err) {
       console.error('Upload failed', err);
     } finally {
       setUploading(false);
     }
-  }, [companyId, currentFolderId, load]);
+  }, [companyId, currentFolderId, reload]);
 
   /* ---- Replace broken URL ---- */
   const handleReplace = useCallback(async (file: File) => {
@@ -475,13 +577,13 @@ export default function MediaLibraryPage() {
       }
 
       setReplaceTarget(null);
-      await load();
+      reload();
     } catch (err) {
       console.error('Replace failed', err);
     } finally {
       setReplacing(false);
     }
-  }, [replaceTarget, companyId, load]);
+  }, [replaceTarget, companyId, reload]);
 
   /* ---- Move asset to folder (creates companyMedia doc if needed) ---- */
   const moveAssetToFolder = useCallback(async (assetId: string, targetFolderId: string | null) => {
@@ -508,10 +610,10 @@ export default function MediaLibraryPage() {
       id, companyId, type: 'folder', name: ml.untitledFolder,
       parentFolderId: currentFolderId ?? null, createdAt: Date.now(),
     });
-    await load();
+    reload();
     setRenamingId(id);
     setRenameValue(ml.untitledFolder);
-  }, [companyId, currentFolderId, load, ml.untitledFolder]);
+  }, [companyId, currentFolderId, reload, ml.untitledFolder]);
 
   /* ---- Rename ---- */
   const handleRenameSubmit = useCallback(async () => {
@@ -526,12 +628,12 @@ export default function MediaLibraryPage() {
           await updateDoc(doc(db, 'companyMedia', asset.libraryDocId), { displayName: renameValue.trim() });
         }
       }
-      await load();
+      reload();
     } catch (err) {
       console.error('Rename failed', err);
     }
     setRenamingId(null);
-  }, [renamingId, renameValue, folders, assets, load]);
+  }, [renamingId, renameValue, folders, assets, reload]);
 
   useEffect(() => {
     if (renamingId && renameInputRef.current) {
@@ -545,7 +647,7 @@ export default function MediaLibraryPage() {
     if (cutIds.size === 0) return;
     try {
       for (const id of cutIds) {
-        const folder = folders.find((f) => f.id === id);
+        const folder = allFolders.find((f) => f.id === id);
         if (folder) {
           await updateDoc(doc(db, 'companyMedia', id), { parentFolderId: currentFolderId ?? null });
         } else {
@@ -553,11 +655,11 @@ export default function MediaLibraryPage() {
         }
       }
       setCutIds(new Set());
-      await load();
+      reload();
     } catch (err) {
       console.error('Move failed', err);
     }
-  }, [cutIds, currentFolderId, folders, moveAssetToFolder, load]);
+  }, [cutIds, currentFolderId, allFolders, moveAssetToFolder, reload]);
 
   /* ---- Drag and drop ---- */
   const handleDragStart = useCallback((e: React.DragEvent, item: ListItem) => {
@@ -590,14 +692,13 @@ export default function MediaLibraryPage() {
     try {
       for (const id of idsToMove) {
         if (id === targetFolderId) continue;
-        const folder = folders.find((f) => f.id === id);
+        const folder = allFolders.find((f) => f.id === id);
         if (folder) {
-          // Don't allow dropping a folder into its own descendant
           let check: string | null = targetFolderId;
           let isDescendant = false;
           while (check) {
             if (check === id) { isDescendant = true; break; }
-            const parent = folders.find((f) => f.id === check);
+            const parent = allFolders.find((f) => f.id === check);
             check = parent?.parentFolderId ?? null;
           }
           if (!isDescendant) {
@@ -608,11 +709,11 @@ export default function MediaLibraryPage() {
         }
       }
       setSelectedIds(new Set());
-      await load();
+      reload();
     } catch (err) {
       console.error('Drop move failed', err);
     }
-  }, [selectedIds, folders, moveAssetToFolder, load]);
+  }, [selectedIds, allFolders, moveAssetToFolder, reload]);
 
   const handleDropOnBreadcrumb = useCallback(async (e: React.DragEvent, targetFolderId: string | null) => {
     e.preventDefault();
@@ -624,7 +725,7 @@ export default function MediaLibraryPage() {
 
     try {
       for (const id of idsToMove) {
-        const folder = folders.find((f) => f.id === id);
+        const folder = allFolders.find((f) => f.id === id);
         if (folder) {
           await updateDoc(doc(db, 'companyMedia', id), { parentFolderId: targetFolderId });
         } else {
@@ -632,11 +733,11 @@ export default function MediaLibraryPage() {
         }
       }
       setSelectedIds(new Set());
-      await load();
+      reload();
     } catch (err) {
       console.error('Breadcrumb drop failed', err);
     }
-  }, [selectedIds, folders, assets, load]);
+  }, [selectedIds, allFolders, moveAssetToFolder, reload]);
 
   /* ---- Selection ---- */
   const handleRowClick = useCallback((e: React.MouseEvent, item: ListItem, index: number) => {
@@ -983,14 +1084,14 @@ export default function MediaLibraryPage() {
             void (async () => {
               for (const id of idsToMove) {
                 if (id === targetFolderId) continue;
-                const isFolder = folders.find((f) => f.id === id);
+                const isFolder = folders.find((f) => f.id === id) || allFolders.find((f) => f.id === id);
                 if (isFolder) {
                   if (targetFolderId) {
                     let check: string | null = targetFolderId;
                     let isDescendant = false;
                     while (check) {
                       if (check === id) { isDescendant = true; break; }
-                      const parent = folders.find((f) => f.id === check);
+                      const parent = allFolders.find((f) => f.id === check);
                       check = parent?.parentFolderId ?? null;
                     }
                     if (!isDescendant) {
@@ -1004,7 +1105,7 @@ export default function MediaLibraryPage() {
                 }
               }
               setSelectedIds(new Set());
-              await load();
+              reload();
             })();
           }}
           onContextMenu={(e) => {
@@ -1042,7 +1143,8 @@ export default function MediaLibraryPage() {
                     : item.type === 'document' ? ml.filterDocuments
                     : ml.filterImages;
 
-                  const usedIn = item._kind === 'folder' ? '—' : ml.usedInModules((item as LibraryAsset).moduleRefs.length);
+                  const refCount = item._kind === 'folder' ? 0 : ((item as LibraryAsset).moduleRefs.length || (item as LibraryAsset).moduleRefCount || 0);
+                  const usedIn = item._kind === 'folder' ? '—' : ml.usedInModules(refCount);
                   const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
                   return (
@@ -1278,7 +1380,7 @@ export default function MediaLibraryPage() {
                 {getFileNameFromUrl(replaceTarget.url)}
               </p>
             </div>
-            <p className="text-sm text-slate-600">{t.admin.brokenMedia.modalBody(replaceTarget.moduleRefs.length)}</p>
+            <p className="text-sm text-slate-600">{t.admin.brokenMedia.modalBody(replaceTarget.moduleRefs.length || replaceTarget.moduleRefCount || 0)}</p>
             <div className="flex flex-col gap-2 pt-1">
               <button type="button" disabled={replacing} onClick={() => replaceInputRef.current?.click()}
                 className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
@@ -1309,7 +1411,7 @@ export default function MediaLibraryPage() {
             <p className="text-sm text-slate-600">
               {deleteTarget._kind === 'folder'
                 ? ml.deleteFolderConfirmMessage
-                : ml.deleteConfirmMessage((deleteTarget as LibraryAsset).moduleRefs.length)}
+                : ml.deleteConfirmMessage((deleteTarget as LibraryAsset).moduleRefs.length || (deleteTarget as LibraryAsset).moduleRefCount || 0)}
             </p>
             <div className="flex flex-col gap-2 pt-1">
               <button type="button" disabled={deleting} onClick={() => void handleDelete()}
