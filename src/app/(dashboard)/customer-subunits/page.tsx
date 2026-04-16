@@ -534,8 +534,8 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                 <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <th className="pb-2">{t.admin.customers.company}</th>
                   <th className="pb-2">{t.admin.customers.contact}</th>
-                  <th className="pb-2">{t.admin.customers.status}</th>
                   <th className="pb-2">{t.admin.customers.orgNumber}</th>
+                  <th className="pb-2"></th>
                   <th className="pb-2 text-right">{t.admin.customers.actions}</th>
                 </tr>
               </thead>
@@ -568,22 +568,15 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                         </p>
                       </div>
                     </td>
-                    <td className="py-3">
-                      <div className="flex flex-col gap-1">
-                        <span
-                          className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}
-                        >
-                          {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
-                        </span>
-                        {subunit.allowSubunits && (
-                          <span className="text-xs font-semibold text-emerald-600">
-                            {t.admin.customers.subunits}
-                          </span>
-                        )}
-                      </div>
-                    </td>
                     <td className="py-3 text-sm text-slate-600">
                       {subunit.vatNumber}
+                    </td>
+                    <td className="py-3">
+                      <span
+                        className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}
+                      >
+                        {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
+                      </span>
                     </td>
                     <td className="py-3 text-right">
                       <div className="flex flex-wrap justify-end gap-2">
