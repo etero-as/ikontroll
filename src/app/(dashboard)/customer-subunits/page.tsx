@@ -162,11 +162,6 @@ export default function CustomerSubunitsPage() {
         <h1 className="text-3xl font-semibold text-slate-900">
           {t.admin.subunits.pageTitle}
         </h1>
-        <p className="text-sm text-slate-500">
-          {customerLoading
-            ? t.admin.subunits.loadingCustomer
-            : t.admin.subunits.activeCustomer(customerName)}
-        </p>
       </div>
 
       {error && (
@@ -588,15 +583,19 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
           <div className="flex flex-wrap justify-end gap-2">
             <button
               onClick={() => openEdit(subunit)}
-              className="flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              aria-label={t.admin.customers.editCustomerAria}
             >
-              {t.admin.customerDetail.users.editButton}
+              <span className="text-xs font-semibold">✏️</span>
             </button>
             <button
               onClick={() => handleDelete(subunit)}
-              className="flex h-9 items-center justify-center rounded-full border border-red-200 px-3 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:border-red-300 hover:bg-red-50"
+              aria-label={t.admin.customers.deleteCustomerAria}
             >
-              {t.common.remove}
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 5 5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
         </td>
@@ -619,12 +618,30 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
               {t.admin.subunits.subtitle}
             </p>
           </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            {t.admin.subunits.newSubunit}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleExpandAll}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+              disabled={!expandableIds.length}
+            >
+              {t.admin.customers.expandAll}
+            </button>
+            <button
+              type="button"
+              onClick={handleCollapseAll}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+              disabled={!expandableIds.length}
+            >
+              {t.admin.customers.collapseAll}
+            </button>
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              {t.admin.subunits.newSubunit}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -643,25 +660,6 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            {expandableIds.length > 0 && (
-              <div className="mb-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleExpandAll}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-700"
-                >
-                  {t.admin.customers.expandAll}
-                </button>
-                <span className="text-xs text-slate-300">|</span>
-                <button
-                  type="button"
-                  onClick={handleCollapseAll}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-700"
-                >
-                  {t.admin.customers.collapseAll}
-                </button>
-              </div>
-            )}
             <table className="min-w-full">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
