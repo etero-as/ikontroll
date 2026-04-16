@@ -335,10 +335,51 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const subunitsSorted = useMemo(
-    () => [...subunits].sort((a, b) => a.companyName.localeCompare(b.companyName)),
-    [subunits],
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, Customer[]>();
+    subunits.forEach((s) => {
+      if (!s.parentCustomerId) return;
+      const list = map.get(s.parentCustomerId) ?? [];
+      list.push(s);
+      map.set(s.parentCustomerId, list);
+    });
+    map.forEach((list) =>
+      list.sort((a, b) => a.companyName.localeCompare(b.companyName)),
+    );
+    return map;
+  }, [subunits]);
+
+  const topLevelSubunits = useMemo(() => {
+    const roots = subunits.filter((s) => s.parentCustomerId === customer.id);
+    return [...roots].sort((a, b) => a.companyName.localeCompare(b.companyName));
+  }, [subunits, customer.id]);
+
+  const expandableIds = useMemo(
+    () => Array.from(childrenMap.keys()),
+    [childrenMap],
   );
+
+  const handleExpandAll = useCallback(() => {
+    setExpandedIds(new Set(expandableIds));
+  }, [expandableIds]);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpandedIds(new Set());
+  }, []);
   const customerCourseIds = useMemo(
     () => new Set(customer.courseIds ?? []),
     [customer.courseIds],
@@ -493,6 +534,79 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     }
   };
 
+  const renderSubunitRows = (subunit: Customer, depth: number): React.ReactNode[] => {
+    const children = childrenMap.get(subunit.id) ?? [];
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedIds.has(subunit.id);
+
+    const row = (
+      <tr key={subunit.id} className="border-b border-slate-100 text-sm last:border-none">
+        <td className="py-3">
+          <div className="flex items-start gap-2" style={{ paddingLeft: depth * 24 }}>
+            <div className="flex h-6 w-6 items-center justify-center">
+              {hasChildren ? (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(subunit.id)}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  {isExpanded ? '▾' : '▸'}
+                </button>
+              ) : subunit.allowSubunits ? (
+                <span
+                  className="inline-flex h-6 w-6 cursor-not-allowed items-center justify-center rounded-full border border-slate-100 text-xs font-semibold text-slate-300"
+                  aria-hidden="true"
+                >
+                  ▸
+                </span>
+              ) : (
+                <span className="inline-block h-6 w-6" />
+              )}
+            </div>
+            <div>
+              <p className="font-semibold text-slate-900">{subunit.companyName}</p>
+              <p className="text-xs text-slate-500">
+                {subunit.address}, {subunit.zipno} {subunit.place}
+              </p>
+            </div>
+          </div>
+        </td>
+        <td className="py-3">
+          <div>
+            <p className="text-sm font-medium text-slate-800">{subunit.contactPerson}</p>
+            <p className="text-xs text-slate-500">{subunit.contactEmail}</p>
+            <p className="text-xs text-slate-500">{subunit.contactPhone}</p>
+          </div>
+        </td>
+        <td className="py-3 text-sm text-slate-600">{subunit.vatNumber}</td>
+        <td className="py-3">
+          <span className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}>
+            {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
+          </span>
+        </td>
+        <td className="py-3 text-right">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              onClick={() => openEdit(subunit)}
+              className="flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              {t.admin.customerDetail.users.editButton}
+            </button>
+            <button
+              onClick={() => handleDelete(subunit)}
+              className="flex h-9 items-center justify-center rounded-full border border-red-200 px-3 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+            >
+              {t.common.remove}
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+
+    if (!hasChildren || !isExpanded) return [row];
+    return [row, ...children.flatMap((child) => renderSubunitRows(child, depth + 1))];
+  };
+
   return (
     <>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -523,12 +637,31 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
           <div className="flex items-center justify-center py-12 text-sm text-slate-500">
             {t.admin.subunits.loading}
           </div>
-        ) : subunitsSorted.length === 0 ? (
+        ) : topLevelSubunits.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-500">
             {t.admin.subunits.noSubunits}
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
+            {expandableIds.length > 0 && (
+              <div className="mb-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleExpandAll}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                >
+                  {t.admin.customers.expandAll}
+                </button>
+                <span className="text-xs text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={handleCollapseAll}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                >
+                  {t.admin.customers.collapseAll}
+                </button>
+              </div>
+            )}
             <table className="min-w-full">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -540,62 +673,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                 </tr>
               </thead>
               <tbody>
-                {subunitsSorted.map((subunit) => (
-                  <tr
-                    key={subunit.id}
-                    className="border-b border-slate-100 text-sm last:border-none"
-                  >
-                    <td className="py-3">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {subunit.companyName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {subunit.address}, {subunit.zipno} {subunit.place}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">
-                          {subunit.contactPerson}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {subunit.contactEmail}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {subunit.contactPhone}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-3 text-sm text-slate-600">
-                      {subunit.vatNumber}
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}
-                      >
-                        {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(subunit)}
-                          className="flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          {t.admin.customerDetail.users.editButton}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(subunit)}
-                          className="flex h-9 items-center justify-center rounded-full border border-red-200 px-3 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
-                        >
-                          {t.common.remove}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {topLevelSubunits.flatMap((s) => renderSubunitRows(s, 0))}
               </tbody>
             </table>
           </div>
