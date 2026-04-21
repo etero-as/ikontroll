@@ -115,15 +115,13 @@ export function Topbar() {
               </p>
               <p className="text-xs text-slate-500">{profile?.email}</p>
             </div>
-            {isCustomerAdmin && activeCustomerId && (
-              <Link
-                href={`/customers/${activeCustomerId}`}
-                onClick={() => { setOpen(false); setPosition(null); }}
-                className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {t.admin.topbar.myAccount}
-              </Link>
-            )}
+            <Link
+              href="/account"
+              onClick={() => { setOpen(false); setPosition(null); }}
+              className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.admin.topbar.myAccount}
+            </Link>
             {canSwitchView && (
               <button
                 onClick={() => handleSwitchMode(portalMode === 'admin' ? 'user' : 'admin')}
