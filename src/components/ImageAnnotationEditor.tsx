@@ -576,7 +576,7 @@ export default function ImageAnnotationEditor({ imageUrl, initialAnnotations, on
               <Redo2 size={14} /> {et.redo}
             </button>
             <button type="button" onClick={handleClearAll} title={et.clearAll}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-slate-700">
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-danger-400 transition hover:bg-slate-700">
               <Trash2 size={14} /> {et.clearAll}
             </button>
           </div>

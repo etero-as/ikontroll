@@ -235,14 +235,14 @@ export default function CourseManager() {
           </div>
           <button
             onClick={() => { setFormError(null); setCreateOpen(true); }}
-            className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-700 hover:shadow-lg active:scale-[0.97] active:shadow-none"
+            className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-800 hover:shadow-lg active:scale-[0.97] active:shadow-none"
           >
             {t.admin.courses.newCourse}
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {error}
           </div>
         )}
@@ -305,7 +305,7 @@ export default function CourseManager() {
                         />
                         <button
                           onClick={() => handleDeleteCourse(course)}
-                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-red-600 hover:border-red-300 hover:bg-red-50"
+                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-danger-600 hover:border-danger-300 hover:bg-danger-50"
                         >
                           {t.admin.courses.delete}
                         </button>
@@ -398,7 +398,7 @@ const CourseModalFrame = ({
             </button>
             <button
               type="submit"
-              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-70"
               disabled={loading}
             >
               {submitLabel}
@@ -479,7 +479,7 @@ const CreateCourseModal = ({
       </label>
       <CourseExpirationFields form={form} expirationType={expirationType} />
       {errorMessage && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {errorMessage}
         </p>
       )}
@@ -537,7 +537,7 @@ const DuplicateCourseModal = ({
       </label>
 
       {errorMessage && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {errorMessage}
         </p>
       )}

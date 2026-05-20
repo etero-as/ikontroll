@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { getTranslation } from '@/utils/translations';
 
 type MenuPosition = { top: number; right: number };
@@ -132,8 +133,12 @@ const ConsumerNavbar = () => {
       <header className="sticky top-0 z-40 flex min-h-16 items-center border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-8">
-            <Link href="/my-courses" className="text-xl font-bold text-slate-900">
-              IKontroll
+            <Link
+              href="/my-courses"
+              aria-label="Skillo"
+              className="inline-flex items-center transition hover:opacity-80"
+            >
+              <Logo variant="horizontal" size={28} />
             </Link>
             <nav className="hidden md:flex md:gap-6">
               <Link
@@ -155,7 +160,7 @@ const ConsumerNavbar = () => {
               <button
                 ref={avatarButtonRef}
                 onClick={toggleAvatarMenu}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-sm font-bold text-white transition hover:bg-brand-800"
                 aria-haspopup="menu"
                 aria-expanded={isAvatarMenuOpen}
               >
@@ -183,7 +188,7 @@ const ConsumerNavbar = () => {
           <div className="relative h-full w-64 bg-white p-6 shadow-xl flex flex-col justify-between">
             <div>
                 <div className="mb-8 flex flex-col items-center gap-3">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-bold text-white">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">
                     {profile?.firstName?.[0]}
                     {profile?.lastName?.[0]}
                   </div>
@@ -209,7 +214,7 @@ const ConsumerNavbar = () => {
 
             <button
               onClick={logout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-danger-600 hover:bg-danger-50"
             >
               <LogOut size={18} />
               {t.common.logout}

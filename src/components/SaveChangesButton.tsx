@@ -17,7 +17,7 @@ type SaveChangesButtonProps = {
 const DEFAULT_MIN_LOADING_MS = 900;
 
 const BASE_CLASS_NAME =
-  'cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-slate-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-70';
+  'cursor-pointer inline-flex items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-brand-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-70';
 
 function normalizeMinLoadingMs(value: number) {
   if (!Number.isFinite(value)) {

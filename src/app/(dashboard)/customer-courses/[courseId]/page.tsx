@@ -254,7 +254,7 @@ const ensureUserRoleForAssignment = (
   }
 
   if (!course) {
-    return <div className="p-8 text-center text-red-500">{t.admin.courseDetail.courseNotFound}</div>;
+    return <div className="p-8 text-center text-danger-500">{t.admin.courseDetail.courseNotFound}</div>;
   }
 
   return (
@@ -285,7 +285,7 @@ const ensureUserRoleForAssignment = (
           <button
             onClick={handleCreateInvite}
             disabled={creatingInvite}
-            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {creatingInvite ? t.admin.courseInvite.creating : t.admin.courseInvite.createCode}
           </button>
@@ -331,7 +331,7 @@ const ensureUserRoleForAssignment = (
         {inviteMessage && (
           <p className="mt-3 text-sm text-emerald-600">{inviteMessage}</p>
         )}
-        {inviteError && <p className="mt-3 text-sm text-red-600">{inviteError}</p>}
+        {inviteError && <p className="mt-3 text-sm text-danger-600">{inviteError}</p>}
       </div>
 
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -427,7 +427,7 @@ const ensureUserRoleForAssignment = (
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
                           <div 
-                            className={`h-full rounded-full transition-all ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-slate-900'}`} 
+                            className={`h-full rounded-full transition-all ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-brand-600'}`} 
                             style={{ width: `${progressPercent}%` }} 
                           />
                         </div>
@@ -443,7 +443,7 @@ const ensureUserRoleForAssignment = (
                         disabled={isUpdating}
                         className={`text-xs font-medium ${
                           isAssigned 
-                            ? 'text-red-600 hover:text-red-700' 
+                            ? 'text-danger-600 hover:text-danger-700' 
                             : 'text-emerald-600 hover:text-emerald-700'
                         }`}
                       >

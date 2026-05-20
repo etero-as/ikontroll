@@ -543,7 +543,7 @@ export default function CustomerManager() {
               </button>
               <button
                 onClick={() => handleDelete(customer)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-danger-200 text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
                 aria-label={t.admin.customers.deleteCustomerAria}
               >
                 <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -607,7 +607,7 @@ export default function CustomerManager() {
             </button>
             <button
               onClick={openCreate}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800"
             >
               {t.admin.customers.newCustomer}
             </button>
@@ -615,7 +615,7 @@ export default function CustomerManager() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {error}
           </div>
         )}
@@ -664,7 +664,7 @@ export default function CustomerManager() {
             </div>
 
             {formError && (
-              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
                 {formError}
               </div>
             )}
@@ -698,7 +698,7 @@ export default function CustomerManager() {
                           </p>
                         )}
                         {suggestionError && (
-                          <p className="px-4 py-3 text-sm text-red-600">{suggestionError}</p>
+                          <p className="px-4 py-3 text-sm text-danger-600">{suggestionError}</p>
                         )}
                         {!suggestionLoading && !suggestionError && suggestions.map((suggestion) => {
                           const locationText = [
@@ -781,7 +781,7 @@ export default function CustomerManager() {
                       {resetBusy ? t.admin.customers.sendingLink : t.admin.customers.sendResetLink}
                     </button>
                     {resetStatus && (
-                      <p className={`text-sm ${resetStatus.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <p className={`text-sm ${resetStatus.type === 'success' ? 'text-emerald-600' : 'text-danger-600'}`}>
                         {resetStatus.message}
                       </p>
                     )}
@@ -806,7 +806,7 @@ export default function CustomerManager() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+                  className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
                 >
                   {busy ? t.admin.customers.saving : editingCustomer ? t.admin.customers.updateCustomer : t.admin.customers.createCustomer}
                 </button>
@@ -831,7 +831,7 @@ const Field = ({ label, error, hint, children }: FieldProps) => (
     <span>{label}</span>
     {hint && <span className="text-xs font-normal text-slate-500">{hint}</span>}
     {children}
-    {error && <span className="text-xs text-red-600">{error}</span>}
+    {error && <span className="text-xs text-danger-600">{error}</span>}
   </label>
 );
 

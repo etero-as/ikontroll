@@ -28,7 +28,7 @@ const DEFAULT_TEMPLATE = {
   body:
     'Dette bekrefter at {{participantName}} har fullført kurset {{courseName}} for {{customerName}} den {{completedDate}}.',
   footer: 'Utstedt av {{issuerName}}.',
-  issuerName: 'Ikontroll',
+  issuerName: 'Skillo',
   signatureName: '',
   signatureTitle: '',
   accentColor: '#0f172a',
@@ -426,7 +426,7 @@ export default function TemplatesPage() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
                 {errorMessage}
               </div>
             )}
@@ -439,7 +439,7 @@ export default function TemplatesPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-2xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? t.admin.templates.saving : t.admin.templates.saveTemplate}
             </button>
@@ -511,7 +511,7 @@ export default function TemplatesPage() {
               >
                 {previewDownloading ? t.admin.templates.downloadingPreview : t.admin.templates.downloadPreview}
               </button>
-              {previewError && <p className="text-sm text-red-600">{previewError}</p>}
+              {previewError && <p className="text-sm text-danger-600">{previewError}</p>}
             </div>
           </div>
         </div>

@@ -177,7 +177,7 @@ const SystemOwnerDashboard = () => {
       )}
 
       {error && !loading && (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        <div className="rounded-3xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-600">
           {error}
         </div>
       )}
@@ -523,7 +523,7 @@ function MetricCard({
       ? delta > 0
         ? 'text-emerald-600'
         : delta < 0
-        ? 'text-red-600'
+        ? 'text-danger-600'
         : 'text-slate-400'
       : null;
 

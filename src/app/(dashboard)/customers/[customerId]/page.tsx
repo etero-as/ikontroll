@@ -64,7 +64,7 @@ export default function CustomerDetailsPage() {
         </div>
       )}
       {!loading && error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-200 bg-danger-50 p-6 text-sm text-danger-600">
           {error}
         </div>
       )}
@@ -173,7 +173,7 @@ const CourseAssignmentsCard = ({
       </div>
 
       {assignError && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+        <div className="mt-4 rounded-xl border border-danger-200 bg-danger-50 px-4 py-2 text-sm text-danger-600">
           {assignError}
         </div>
       )}
@@ -181,7 +181,7 @@ const CourseAssignmentsCard = ({
       <div className="mt-4 overflow-x-auto">
         {loading && <p className="text-sm text-slate-500">{td.loadingCourses}</p>}
         {!loading && error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-danger-600">{error}</p>
         )}
         {!loading && !error && courses.length === 0 && (
           <p className="text-sm text-slate-500">{td.noCoursesAvailable}</p>

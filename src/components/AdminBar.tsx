@@ -119,7 +119,7 @@ export default function CourseEditBar() {
               <button
                 type="button"
                 onClick={handlers.openAddModule}
-                className="rounded-xl bg-slate-900 px-2.5 py-1 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="rounded-xl bg-brand-700 px-2.5 py-1 text-sm font-semibold text-white transition hover:bg-brand-800"
               >
                 {t.admin.moduleDetail.addModule}
               </button>
@@ -199,7 +199,7 @@ export default function CourseEditBar() {
                               <button
                                 type="button"
                                 onClick={() => handlers.deleteModule?.(m.id)}
-                                className="rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                                className="rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
                               >
                                 {t.common.remove}
                               </button>
@@ -245,7 +245,7 @@ export default function CourseEditBar() {
               />
               <button
                 type="submit"
-                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                className="cursor-pointer rounded-lg bg-brand-700 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-800"
               >
                 {t.common.add}
               </button>
@@ -258,7 +258,7 @@ export default function CourseEditBar() {
                 ×
               </button>
               {languageInputError && (
-                <p className="pointer-events-none absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-red-500">
+                <p className="pointer-events-none absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-danger-500">
                   {t.common.languageCodeOnlyLetters}
                 </p>
               )}
@@ -277,7 +277,7 @@ export default function CourseEditBar() {
                 type="button"
                 onClick={() => handlers.handleRemoveActiveLanguage()}
                 disabled={info.languages.length <= 1}
-                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-200 p-0 text-sm font-semibold leading-none text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-danger-200 p-0 text-sm font-semibold leading-none text-danger-600 transition hover:border-danger-300 hover:bg-danger-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-transparent"
                 aria-label={t.common.removeLanguageLabel(info.activeLanguage.toUpperCase())}
                 title={t.common.removeLanguageTitle(info.activeLanguage.toUpperCase())}
               >

@@ -161,7 +161,7 @@ export const translations = {
     },
     admin: {
       layout: {
-        preparing: 'Klargjør IKontroll …',
+        preparing: 'Klargjør Skillo …',
         noAdminAccess: 'Ingen administratortilganger',
         noAdminAccessDescription:
           'Vi finner ingen kunder eller selskaper der denne brukeren er administrator. Ta kontakt med systemeier for å få tilgang.',
@@ -806,7 +806,7 @@ export const translations = {
     },
     portalMode: {
       selectMode: 'Velg arbeidsmodus',
-      howToUse: 'Hvordan vil du bruke IKontroll?',
+      howToUse: 'Hvordan vil du bruke Skillo?',
       description: 'Du har tilgang som administrator og som kursdeltaker. Velg hvordan du vil bruke plattformen nå.',
       admin: 'Administrator',
       user: 'Bruker',
@@ -987,7 +987,7 @@ export const translations = {
     },
     admin: {
       layout: {
-        preparing: 'Preparing IKontroll …',
+        preparing: 'Preparing Skillo …',
         noAdminAccess: 'No admin access',
         noAdminAccessDescription:
           'We cannot find any customers or companies where this user is an administrator. Contact the system owner for access.',
@@ -1631,7 +1631,7 @@ export const translations = {
     },
     portalMode: {
       selectMode: 'Select mode',
-      howToUse: 'How do you want to use IKontroll?',
+      howToUse: 'How do you want to use Skillo?',
       description: 'You have access as both administrator and course participant. Choose how you want to use the platform now.',
       admin: 'Administrator',
       user: 'User',

@@ -8,6 +8,35 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Skillo brand palette
+     Use bg-brand-600 / text-brand-700 / hover:bg-brand-800 etc.
+     Primary CTAs use brand-700 (passes WCAG AA for white text). */
+  --color-brand-50:  #F0FDFA;
+  --color-brand-100: #CCFBF1;
+  --color-brand-200: #99F6E4;
+  --color-brand-300: #5EEAD4;
+  --color-brand-400: #2DD4BF;
+  --color-brand-500: #14B8A6;
+  --color-brand-600: #0D9488;
+  --color-brand-700: #0F766E;
+  --color-brand-800: #115E59;
+  --color-brand-900: #134E4A;
+
+  /* Danger / destructive — grounded warm red that pairs with brand teal.
+     Slightly desaturated vs Tailwind's default red so it doesn't shout
+     next to the calmer brand palette. Use text-danger-600 / bg-danger-50
+     / border-danger-200 / hover:bg-danger-50 etc. */
+  --color-danger-50:  #FEF2F2;
+  --color-danger-100: #FCE7E7;
+  --color-danger-200: #F8CFCF;
+  --color-danger-300: #F0A8A8;
+  --color-danger-400: #E27676;
+  --color-danger-500: #C94A4A;
+  --color-danger-600: #B23131;
+  --color-danger-700: #8F2626;
+  --color-danger-800: #6E1F1F;
+  --color-danger-900: #4E1818;
 }
 
 body {

@@ -98,7 +98,7 @@ function getTypeIcon(type: ModuleMediaType | 'folder') {
     case 'folder': return <FolderIcon size={18} className="text-amber-500" />;
     case 'image': return <ImageIcon size={18} className="text-blue-500" />;
     case 'video': return <Film size={18} className="text-purple-500" />;
-    case 'document': return <FileText size={18} className="text-red-500" />;
+    case 'document': return <FileText size={18} className="text-danger-500" />;
     default: return <FileText size={18} className="text-slate-400" />;
   }
 }
@@ -945,7 +945,7 @@ export default function MediaLibraryPage() {
             {ml.newFolder}
           </button>
           <button type="button" disabled={uploading} onClick={() => uploadInputRef.current?.click()}
-            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
             <Upload size={16} />
             {uploading ? ml.uploading : ml.addMedia}
           </button>
@@ -1233,7 +1233,7 @@ export default function MediaLibraryPage() {
                       ) : item._kind === 'folder' ? (
                         <FolderIcon size={40} className="text-amber-300" />
                       ) : (
-                        <FileText size={40} className="text-red-300" />
+                        <FileText size={40} className="text-danger-300" />
                       )}
                     </div>
                     <div className="flex flex-col gap-0.5 px-2.5 py-2">
@@ -1324,9 +1324,9 @@ export default function MediaLibraryPage() {
               </button>
               <div className="my-1 border-t border-slate-100" />
               <button type="button" onClick={() => { setDeleteTarget(contextMenu.item!); closeContextMenu(); }}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-danger-600 hover:bg-danger-50">
                 {ml.deleteButton}
-                <span className="ml-auto text-[10px] text-red-400">Del</span>
+                <span className="ml-auto text-[10px] text-danger-400">Del</span>
               </button>
             </>
           ) : (
@@ -1383,7 +1383,7 @@ export default function MediaLibraryPage() {
             <p className="text-sm text-slate-600">{t.admin.brokenMedia.modalBody(replaceTarget.moduleRefs.length || replaceTarget.moduleRefCount || 0)}</p>
             <div className="flex flex-col gap-2 pt-1">
               <button type="button" disabled={replacing} onClick={() => replaceInputRef.current?.click()}
-                className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+                className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
                 {replacing ? t.admin.brokenMedia.replacing : t.admin.brokenMedia.uploadButton}
               </button>
               <button type="button" disabled={replacing} onClick={() => setReplaceTarget(null)}
@@ -1415,7 +1415,7 @@ export default function MediaLibraryPage() {
             </p>
             <div className="flex flex-col gap-2 pt-1">
               <button type="button" disabled={deleting} onClick={() => void handleDelete()}
-                className="cursor-pointer rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60">
+                className="cursor-pointer rounded-xl border border-danger-200 bg-danger-50 px-4 py-2.5 text-sm font-semibold text-danger-700 hover:border-danger-300 hover:bg-danger-100 disabled:cursor-not-allowed disabled:opacity-60">
                 {deleting ? ml.deleting : ml.deleteConfirmButton}
               </button>
               <button type="button" disabled={deleting} onClick={() => setDeleteTarget(null)}

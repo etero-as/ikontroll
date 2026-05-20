@@ -108,7 +108,7 @@ export default function AccountPage() {
         className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">
             {initials}
           </div>
           <div>
@@ -167,7 +167,7 @@ export default function AccountPage() {
           </span>
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger-600">{error}</p>}
         {savedAt && !error && (
           <p className="text-sm text-emerald-600">{ta.saved}</p>
         )}
@@ -179,7 +179,7 @@ export default function AccountPage() {
           <button
             type="submit"
             disabled={!canSave}
-            className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? t.common.saving : ta.saveChanges}
           </button>

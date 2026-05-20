@@ -406,7 +406,7 @@ export default function ConsumerModuleView({
       startVelocity: 40,
       gravity: 1.05,
       origin: { x: 0.48, y: 0.58 },
-      colors: ['#10b981', '#34d399', '#059669', '#f8fafc'],
+      colors: ['#0D9488', '#5EEAD4', '#FBBF24', '#FFFFFF'],
     });
     confetti({
       particleCount: 50,
@@ -415,7 +415,7 @@ export default function ConsumerModuleView({
       startVelocity: 40,
       gravity: 1.05,
       origin: { x: 0.52, y: 0.58 },
-        colors: ['#10b981', '#34d399', '#059669', '#f8fafc'],
+        colors: ['#0D9488', '#5EEAD4', '#FBBF24', '#FFFFFF'],
     });
   }, [showCourseComplete]);
 
@@ -520,7 +520,7 @@ export default function ConsumerModuleView({
     return (
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-8">
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
-        <div className="rounded-full bg-emerald-100 p-6">
+        <div className="rounded-full bg-brand-100 p-6">
           <div className="text-6xl">🏆</div>
         </div>
         <div className="space-y-2">
@@ -538,7 +538,7 @@ export default function ConsumerModuleView({
             type="button"
             onClick={handleDownloadDiploma}
             disabled={downloading}
-            className="rounded-2xl bg-slate-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-2xl bg-brand-700 px-8 py-3 text-base font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {downloading ? t.courses.diplomaDownloading : t.courses.downloadDiploma}
           </button>
@@ -549,7 +549,7 @@ export default function ConsumerModuleView({
           >
             {t.modules.backToOverview}
           </button>
-          {downloadError && <p className="text-sm text-red-600">{downloadError}</p>}
+          {downloadError && <p className="text-sm text-danger-600">{downloadError}</p>}
         </div>
       </div>
       </div>
@@ -643,7 +643,7 @@ export default function ConsumerModuleView({
             </span>
             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-slate-900 transition-all"
+                className="h-full rounded-full bg-brand-600 transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -816,12 +816,12 @@ export default function ConsumerModuleView({
                     return (
                       <div
                         key={question.id}
-                        className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4"
+                        className="rounded-2xl border border-danger-100 bg-danger-50 px-5 py-4"
                       >
-                        <p className="text-base font-semibold text-red-700">
+                        <p className="text-base font-semibold text-danger-700">
                           {questionText || t.modules.question}
                         </p>
-                        <p className="mt-2 text-sm text-red-600">
+                        <p className="mt-2 text-sm text-danger-600">
                           {t.modules.yourAnswer} {userAnswerText}
                         </p>
                         {correctAnswerText && (
@@ -861,7 +861,7 @@ export default function ConsumerModuleView({
                   <button
                   type="button"
                     onClick={handleGoToNextModule}
-                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    className="rounded-2xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800"
                   >
                     {t.modules.nextModule}
                   </button>
@@ -887,7 +887,7 @@ export default function ConsumerModuleView({
                       }
                       className={`w-full rounded-2xl border px-4 py-3 text-left text-sm transition ${
                         isSelected
-                          ? 'border-slate-900 bg-slate-900 text-white'
+                          ? 'border-brand-700 bg-brand-700 text-white'
                           : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
@@ -907,7 +907,7 @@ export default function ConsumerModuleView({
                 <button
                   onClick={handleNext}
                   disabled={!(answers[currentQuestion.id]?.length ?? 0)}
-                  className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-2xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {currentIndex === questions.length - 1
                     ? t.modules.finishQuiz

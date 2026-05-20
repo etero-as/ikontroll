@@ -329,7 +329,7 @@ export default function CoursePreviewPage({
   if (error || modulesError || !course) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-600">
           {error ?? modulesError ?? coursePageLabels.notFound}
         </div>
       </div>
@@ -376,7 +376,7 @@ export default function CoursePreviewPage({
             </div>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-slate-900 transition-all"
+                className="h-full rounded-full bg-brand-600 transition-all"
                 style={{ width: `${courseProgressPercent}%` }}
               />
             </div>
@@ -442,7 +442,7 @@ export default function CoursePreviewPage({
           <button
             onClick={handleStartCourse}
             disabled={!nextModuleId}
-            className="w-full max-w-xl rounded-2xl bg-slate-900 px-8 py-3 text-center text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full max-w-xl rounded-2xl bg-brand-700 px-8 py-3 text-center text-base font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {startButtonLabel}
           </button>

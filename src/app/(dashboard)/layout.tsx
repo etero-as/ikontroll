@@ -80,7 +80,7 @@ export default function DashboardLayout({
           </div>
           <button
             onClick={() => logout()}
-            className="rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="rounded-xl bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800"
           >
             {t.admin.layout.backToLogin}
           </button>

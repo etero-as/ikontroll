@@ -8,6 +8,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
+import { Logo } from '@/components/Logo';
 
 export default function CourseSignupPage() {
   const router = useRouter();
@@ -76,14 +77,14 @@ export default function CourseSignupPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-xl"
       >
-        <div className="space-y-1">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            IKontroll
-          </p>
-          <h1 className="text-2xl font-semibold text-slate-900">{t.auth.signupTitle}</h1>
-          <p className="text-sm text-slate-500">
-            {t.auth.signupSubtitle}
-          </p>
+        <div className="flex flex-col items-center space-y-3 text-center">
+          <Logo variant="stacked" size={64} />
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-slate-900">{t.auth.signupTitle}</h1>
+            <p className="text-sm text-slate-500">
+              {t.auth.signupSubtitle}
+            </p>
+          </div>
         </div>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
@@ -130,12 +131,12 @@ export default function CourseSignupPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger-600">{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+          className="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
         >
           {submitting ? t.auth.signingUp : t.auth.signupButton}
         </button>

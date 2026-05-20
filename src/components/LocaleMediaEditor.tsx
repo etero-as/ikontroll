@@ -341,7 +341,7 @@ const SortableMediaCard = ({
             <button
               type="button"
               onClick={onRemove}
-              className="cursor-pointer rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+              className="cursor-pointer rounded-xl border border-danger-200 px-3 py-2 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
             >
               {t.common.remove}
             </button>
@@ -975,7 +975,7 @@ const LocaleMediaEditor = ({
                 type="button"
                 disabled={replaceUploading}
                 onClick={() => replaceFileInputRef.current?.click()}
-                className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {replaceUploading ? t.admin.brokenMedia.replacing : t.admin.brokenMedia.uploadButton}
               </button>
@@ -1012,7 +1012,7 @@ const LocaleMediaEditor = ({
               <button
                 type="button"
                 onClick={confirmSyncDelete}
-                className="cursor-pointer rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:border-red-300 hover:bg-red-50 text-left"
+                className="cursor-pointer rounded-xl border border-danger-200 px-4 py-2.5 text-sm font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50 text-left"
               >
                 {t.admin.moduleDetail.mediaSyncDeleteConfirm}
               </button>
