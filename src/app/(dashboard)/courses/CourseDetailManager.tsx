@@ -219,7 +219,7 @@ const SortableModuleItem = ({
           <DuplicateButton onClick={() => onDuplicate(module)}>{t.common.duplicate}</DuplicateButton>
           <button
             onClick={() => onDelete(module.id)}
-            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-lg border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
           >
             {t.admin.courseDetail.removeModule}
           </button>
@@ -1052,7 +1052,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={handleDeleteCourse}
-            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
           >
             {t.admin.courseDetail.deleteCourse}
           </button>
@@ -1129,7 +1129,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
                 <button
                   type="button"
                   onClick={handleRemoveCourseImage}
-                  className="cursor-pointer rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                  className="cursor-pointer rounded-xl border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
                   disabled={uploadingImage}
                 >
                   {t.admin.courseDetail.removeImage}
@@ -1178,7 +1178,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
               )}
             </div>
             {imageError && (
-              <p className="text-xs font-semibold text-red-600">{imageError}</p>
+              <p className="text-xs font-semibold text-danger-600">{imageError}</p>
             )}
           </div>
 
@@ -1214,7 +1214,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
         </div>
 
         {modulesError && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {modulesError}
           </div>
         )}
@@ -1230,7 +1230,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           <p className="mt-3 text-xs text-slate-400">{t.admin.courseDetail.savingOrder}</p>
         )}
         {orderingError && (
-          <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <div className="mt-3 rounded-xl border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
             {orderingError}
           </div>
         )}
@@ -1315,7 +1315,7 @@ const ModalFormFooter = ({
   return (
     <>
       {errorMessage && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {errorMessage}
         </p>
       )}
@@ -1407,7 +1407,7 @@ const ModuleQuickCreateModal = ({
             disabled={loading}
           />
           {form.formState.errors.title?.message && (
-            <p className="text-xs font-semibold text-red-600">
+            <p className="text-xs font-semibold text-danger-600">
               {form.formState.errors.title.message}
             </p>
           )}
@@ -1511,7 +1511,7 @@ const ModuleQuickCreateModal = ({
                 disabled={loading}
               />
               {form.formState.errors.examPassPercentage?.message && (
-                <p className="text-xs font-semibold text-red-600">
+                <p className="text-xs font-semibold text-danger-600">
                   {form.formState.errors.examPassPercentage.message}
                 </p>
               )}
@@ -1605,7 +1605,7 @@ const DuplicateModuleModal = ({
             disabled={loading}
           />
           {form.formState.errors.title?.message && (
-            <p className="text-xs font-semibold text-red-600">
+            <p className="text-xs font-semibold text-danger-600">
               {form.formState.errors.title.message}
             </p>
           )}

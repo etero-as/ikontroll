@@ -71,7 +71,7 @@ export default function CourseExpirationFields<
               className="w-32 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
             {typeof expirationAmountMessage === 'string' && (
-              <span className="text-xs font-semibold text-red-600">
+              <span className="text-xs font-semibold text-danger-600">
                 {expirationAmountMessage}
               </span>
             )}
@@ -94,7 +94,7 @@ export default function CourseExpirationFields<
               className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-sm font-sans text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
             {typeof expirationDateMessage === 'string' && (
-              <span className="text-xs font-semibold text-red-600">
+              <span className="text-xs font-semibold text-danger-600">
                 {expirationDateMessage}
               </span>
             )}

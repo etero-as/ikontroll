@@ -155,7 +155,7 @@ export default function ConsumerCourseView({
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-600">
           {error}
         </div>
       </div>
@@ -227,7 +227,7 @@ export default function ConsumerCourseView({
               >
                 {downloading ? t.courses.diplomaDownloading : t.courses.downloadDiploma}
               </button>
-              {downloadError && <p className="text-sm text-red-600">{downloadError}</p>}
+              {downloadError && <p className="text-sm text-danger-600">{downloadError}</p>}
             </div>
           )}
         </div>

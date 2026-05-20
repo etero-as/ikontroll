@@ -167,7 +167,7 @@ export default function AccountPage() {
           </span>
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger-600">{error}</p>}
         {savedAt && !error && (
           <p className="text-sm text-emerald-600">{ta.saved}</p>
         )}

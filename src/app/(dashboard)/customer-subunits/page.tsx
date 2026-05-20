@@ -165,7 +165,7 @@ export default function CustomerSubunitsPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
           {error}
         </div>
       )}
@@ -590,7 +590,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
             </button>
             <button
               onClick={() => handleDelete(subunit)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:border-red-300 hover:bg-red-50"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-danger-200 text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
               aria-label={t.admin.customers.deleteCustomerAria}
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -645,7 +645,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {error}
           </div>
         )}
@@ -702,7 +702,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
             </div>
 
             {formError && (
-              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
                 {formError}
               </div>
             )}
@@ -744,7 +744,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                           </p>
                         )}
                         {suggestionError && (
-                          <p className="px-4 py-3 text-sm text-red-600">
+                          <p className="px-4 py-3 text-sm text-danger-600">
                             {suggestionError}
                           </p>
                         )}
@@ -970,7 +970,7 @@ const Field = ({
     <span>{label}</span>
     {hint && <span className="text-xs font-normal text-slate-500">{hint}</span>}
     {children}
-    {error && <span className="text-xs text-red-600">{error}</span>}
+    {error && <span className="text-xs text-danger-600">{error}</span>}
   </label>
 );
 

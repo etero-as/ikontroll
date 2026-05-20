@@ -258,7 +258,7 @@ export default function CompanyUsersManager({
             </button>
             <button
               onClick={() => handleDelete(user)}
-              className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="rounded-lg border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 hover:bg-danger-50"
             >
               {tu.removeButton}
             </button>
@@ -285,7 +285,7 @@ export default function CompanyUsersManager({
       </div>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
           {error}
         </div>
       )}
@@ -335,7 +335,7 @@ export default function CompanyUsersManager({
             </div>
 
             {formError && (
-              <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
                 {formError}
               </div>
             )}
@@ -461,7 +461,7 @@ const Field = ({ label, error, children }: FieldProps) => (
   <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
     {label}
     {children}
-    {error && <span className="text-xs text-red-600">{error}</span>}
+    {error && <span className="text-xs text-danger-600">{error}</span>}
   </label>
 );
 

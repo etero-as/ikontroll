@@ -139,7 +139,7 @@ export default function LoginPage() {
           </label>
         )}
 
-        {error && !showReset && <p className="text-sm text-red-600">{error}</p>}
+        {error && !showReset && <p className="text-sm text-danger-600">{error}</p>}
         {resetMessage && showReset && (
           <p className="text-sm text-emerald-600">{resetMessage}</p>
         )}

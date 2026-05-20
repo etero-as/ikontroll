@@ -182,7 +182,7 @@ export default function MyCoursesPage() {
             </button>
           </form>
           {redeemMessage && <p className="mt-3 text-sm text-emerald-600">{redeemMessage}</p>}
-          {redeemError && <p className="mt-3 text-sm text-red-600">{redeemError}</p>}
+          {redeemError && <p className="mt-3 text-sm text-danger-600">{redeemError}</p>}
         </div>
 
         <h2 className="text-xl font-semibold text-slate-900">

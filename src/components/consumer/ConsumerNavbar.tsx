@@ -214,7 +214,7 @@ const ConsumerNavbar = () => {
 
             <button
               onClick={logout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-danger-600 hover:bg-danger-50"
             >
               <LogOut size={18} />
               {t.common.logout}

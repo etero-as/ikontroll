@@ -561,7 +561,7 @@ export default function ModulePreviewPage({
   if (error || !module) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-600">
           {error ?? L.notFound}
         </div>
       </div>
@@ -834,12 +834,12 @@ export default function ModulePreviewPage({
                     return (
                       <div
                         key={question.id}
-                        className="rounded-2xl border border-red-100 bg-red-50 px-5 py-4"
+                        className="rounded-2xl border border-danger-100 bg-danger-50 px-5 py-4"
                       >
-                        <p className="text-base font-semibold text-red-700">
+                        <p className="text-base font-semibold text-danger-700">
                           {questionText || L.questionFallback}
                         </p>
-                        <p className="mt-2 text-sm text-red-600">
+                        <p className="mt-2 text-sm text-danger-600">
                           {L.yourAnswer} {userAnswerText}
                         </p>
                         {correctAnswerText && (

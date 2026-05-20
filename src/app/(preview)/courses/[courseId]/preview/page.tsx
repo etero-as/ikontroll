@@ -329,7 +329,7 @@ export default function CoursePreviewPage({
   if (error || modulesError || !course) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-600">
           {error ?? modulesError ?? coursePageLabels.notFound}
         </div>
       </div>

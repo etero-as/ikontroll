@@ -242,7 +242,7 @@ export default function CourseManager() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-4 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {error}
           </div>
         )}
@@ -305,7 +305,7 @@ export default function CourseManager() {
                         />
                         <button
                           onClick={() => handleDeleteCourse(course)}
-                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-red-600 hover:border-red-300 hover:bg-red-50"
+                          className="inline-flex appearance-none items-center cursor-pointer rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold leading-normal font-sans text-danger-600 hover:border-danger-300 hover:bg-danger-50"
                         >
                           {t.admin.courses.delete}
                         </button>
@@ -479,7 +479,7 @@ const CreateCourseModal = ({
       </label>
       <CourseExpirationFields form={form} expirationType={expirationType} />
       {errorMessage && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {errorMessage}
         </p>
       )}
@@ -537,7 +537,7 @@ const DuplicateCourseModal = ({
       </label>
 
       {errorMessage && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-lg border border-danger-100 bg-danger-50 px-3 py-2 text-sm text-danger-600">
           {errorMessage}
         </p>
       )}

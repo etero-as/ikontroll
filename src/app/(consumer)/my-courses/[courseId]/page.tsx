@@ -45,11 +45,11 @@ export default function ConsumerCourseDetailPage() {
   if (!memberships.length) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="space-y-4 rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-center text-sm text-red-600">
+        <div className="space-y-4 rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-center text-sm text-danger-600">
           <p>{t.courses.noAccessToCourse}</p>
           <button
             onClick={() => router.replace('/my-courses')}
-            className="rounded-full bg-red-600 px-4 py-2 text-white transition hover:bg-red-500"
+            className="rounded-full bg-danger-600 px-4 py-2 text-white transition hover:bg-danger-500"
           >
             {t.courses.backToMyCourses}
           </button>
@@ -61,7 +61,7 @@ export default function ConsumerCourseDetailPage() {
   if (courseError || modulesError || !course) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 px-6 py-4 text-sm text-danger-600">
           {courseError ?? modulesError ?? t.courses.courseNotFound}
         </div>
       </div>

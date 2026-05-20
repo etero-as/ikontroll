@@ -426,7 +426,7 @@ export default function TemplatesPage() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
                 {errorMessage}
               </div>
             )}
@@ -511,7 +511,7 @@ export default function TemplatesPage() {
               >
                 {previewDownloading ? t.admin.templates.downloadingPreview : t.admin.templates.downloadPreview}
               </button>
-              {previewError && <p className="text-sm text-red-600">{previewError}</p>}
+              {previewError && <p className="text-sm text-danger-600">{previewError}</p>}
             </div>
           </div>
         </div>

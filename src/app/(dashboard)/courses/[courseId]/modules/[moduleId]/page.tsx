@@ -628,7 +628,7 @@ export default function CourseModuleDetailPage() {
           </div>
           <button
             onClick={handleDelete}
-            className="cursor-pointer rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
           >
             {t.admin.moduleDetail.removeModule}
           </button>
@@ -745,7 +745,7 @@ export default function CourseModuleDetailPage() {
         </div>
 
         {formError && (
-          <div className="mt-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mt-6 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
             {formError}
           </div>
         )}
@@ -1041,21 +1041,21 @@ const QuillEditor = ({
             <button
               type="button"
               onClick={() => handleTableAction('deleteRow')}
-              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-danger-200 bg-white px-3 py-1 text-xs font-semibold text-danger-600 hover:bg-danger-50"
             >
               {t.admin.moduleDetail.deleteRow}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteColumn')}
-              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-danger-200 bg-white px-3 py-1 text-xs font-semibold text-danger-600 hover:bg-danger-50"
             >
               {t.admin.moduleDetail.deleteColumn}
             </button>
             <button
               type="button"
               onClick={() => handleTableAction('deleteTable')}
-              className="cursor-pointer rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+              className="cursor-pointer rounded-full border border-danger-200 bg-white px-3 py-1 text-xs font-semibold text-danger-600 hover:bg-danger-50"
             >
               {t.admin.moduleDetail.deleteTable}
             </button>
@@ -1446,7 +1446,7 @@ const SortableQuestionAlternative = ({
           <button
             type="button"
             onClick={() => onRemove(alternative.id)}
-            className="cursor-pointer rounded-lg border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-lg border border-danger-200 px-2 py-1 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
           >
             {t.admin.moduleDetail.removeAlternative}
           </button>
@@ -1630,7 +1630,7 @@ const QuestionEditor = ({
           <button
             type="button"
             onClick={onRemove}
-            className="cursor-pointer rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-300 hover:bg-red-50"
+            className="cursor-pointer rounded-lg border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 hover:border-danger-300 hover:bg-danger-50"
           >
             {t.admin.moduleDetail.removeQuestion}
           </button>

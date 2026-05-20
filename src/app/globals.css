@@ -22,6 +22,21 @@
   --color-brand-700: #0F766E;
   --color-brand-800: #115E59;
   --color-brand-900: #134E4A;
+
+  /* Danger / destructive — grounded warm red that pairs with brand teal.
+     Slightly desaturated vs Tailwind's default red so it doesn't shout
+     next to the calmer brand palette. Use text-danger-600 / bg-danger-50
+     / border-danger-200 / hover:bg-danger-50 etc. */
+  --color-danger-50:  #FEF2F2;
+  --color-danger-100: #FCE7E7;
+  --color-danger-200: #F8CFCF;
+  --color-danger-300: #F0A8A8;
+  --color-danger-400: #E27676;
+  --color-danger-500: #C94A4A;
+  --color-danger-600: #B23131;
+  --color-danger-700: #8F2626;
+  --color-danger-800: #6E1F1F;
+  --color-danger-900: #4E1818;
 }
 
 body {

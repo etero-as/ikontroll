@@ -133,7 +133,7 @@ export default function CompleteProfilePage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger-600">{error}</p>}
 
         <button
           type="submit"
