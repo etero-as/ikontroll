@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { getTranslation } from '@/utils/translations';
 
 type MenuPosition = { top: number; right: number };
@@ -132,8 +133,12 @@ const ConsumerNavbar = () => {
       <header className="sticky top-0 z-40 flex min-h-16 items-center border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-8">
-            <Link href="/my-courses" className="text-xl font-bold text-slate-900">
-              IKontroll
+            <Link
+              href="/my-courses"
+              aria-label="Skillo"
+              className="inline-flex items-center transition hover:opacity-80"
+            >
+              <Logo variant="horizontal" size={28} />
             </Link>
             <nav className="hidden md:flex md:gap-6">
               <Link

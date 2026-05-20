@@ -8,6 +8,7 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
+import { Logo } from '@/components/Logo';
 
 const normalizeRedirect = (value: string | null) => {
   if (!value) {
@@ -91,9 +92,12 @@ function MagicLoginContent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mb-6 flex justify-center">
+          <Logo variant="stacked" size={56} />
+        </div>
         {isLoading ? (
           <>
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
             <h1 className="text-xl font-semibold text-slate-900">{t.auth.loggingYouIn}</h1>
             <p className="mt-2 text-sm text-slate-500">
               {t.auth.magicLinkDescription}
@@ -132,7 +136,10 @@ export default function MagicLoginPage() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
+            <div className="mb-6 flex justify-center">
+              <Logo variant="stacked" size={56} />
+            </div>
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
             <h1 className="text-xl font-semibold text-slate-900">Logger deg inn …</h1>
             <p className="mt-2 text-sm text-slate-500">
               Vi bruker lenken du fikk tilsendt for å logge deg inn automatisk.

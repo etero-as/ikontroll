@@ -11,6 +11,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { getTranslation } from '@/utils/translations';
 import { saveLocale } from '@/utils/localization';
 import CourseEditBar from '@/components/AdminBar';
+import { Logo } from '@/components/Logo';
 
 type MenuPosition = { top: number; right: number };
 
@@ -157,8 +158,12 @@ export function Topbar() {
       <div className="sticky top-0 z-40">
         <header className="flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-xl font-bold text-slate-900">
-            IKontroll
+          <Link
+            href="/dashboard"
+            aria-label="Skillo"
+            className="inline-flex items-center transition hover:opacity-80"
+          >
+            <Logo variant="horizontal" size={28} />
           </Link>
           {isCustomerAdmin && customerMemberships.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-slate-600">

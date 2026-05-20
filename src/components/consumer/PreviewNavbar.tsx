@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 
@@ -45,8 +46,8 @@ function PreviewNavbarContent() {
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 md:px-8">
         <div className="flex items-center gap-8">
           <div className="group relative">
-            <span className="cursor-not-allowed select-none text-xl font-bold text-slate-300">
-              IKontroll
+            <span className="inline-flex cursor-not-allowed select-none items-center opacity-40 grayscale">
+              <Logo variant="horizontal" size={28} />
             </span>
             <div className="pointer-events-none absolute left-0 top-full z-10 mt-2 hidden w-max rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-lg group-hover:block">
               {labels.brandTooltip}

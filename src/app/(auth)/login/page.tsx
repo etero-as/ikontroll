@@ -7,6 +7,7 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/aut
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { getPreferredLocale, getSavedLocale } from '@/utils/localization';
 import { getTranslation } from '@/utils/translations';
 
@@ -102,16 +103,16 @@ export default function LoginPage() {
         onSubmit={showReset ? handlePasswordReset : handleSubmit}
         className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-xl"
       >
-        <div className="space-y-1">
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            IKontroll
-          </p>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {showReset ? t.auth.forgotPasswordLink : t.auth.loginTitle}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {showReset ? t.auth.forgotPasswordDescription : t.auth.loginSubtitle}
-          </p>
+        <div className="flex flex-col items-center space-y-3 text-center">
+          <Logo variant="stacked" size={64} />
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {showReset ? t.auth.forgotPasswordLink : t.auth.loginTitle}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {showReset ? t.auth.forgotPasswordDescription : t.auth.loginSubtitle}
+            </p>
+          </div>
         </div>
 
         <label className="block space-y-2 text-sm font-medium text-slate-700">
