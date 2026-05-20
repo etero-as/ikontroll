@@ -28,7 +28,7 @@ const DEFAULT_TEMPLATE = {
   body:
     'Dette bekrefter at {{participantName}} har fullført kurset {{courseName}} for {{customerName}} den {{completedDate}}.',
   footer: 'Utstedt av {{issuerName}}.',
-  issuerName: 'Ikontroll',
+  issuerName: 'Skillo',
   signatureName: '',
   signatureTitle: '',
   accentColor: '#0f172a',

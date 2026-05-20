@@ -8,7 +8,7 @@ import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 const usersCollection = adminDb.collection('users');
 const SVEVE_USERNAME = process.env.SVEVE_USERNAME;
 const SVEVE_PASSWORD = process.env.SVEVE_PASSWORD;
-const SVEVE_SENDER = process.env.SVEVE_SENDER ?? 'Ikontroll';
+const SVEVE_SENDER = process.env.SVEVE_SENDER ?? 'Skillo';
 const PORTAL_LOGIN_URL =
   process.env.PORTAL_LOGIN_URL ??
   process.env.NEXT_PUBLIC_PORTAL_URL ??
@@ -520,7 +520,7 @@ const sendCredentialsSms = async ({
     ? uniqueTitles.length === 1
       ? `Du har fått tilgang til kurset ${uniqueTitles[0]}.`
       : `Du har fått tilgang til kursene ${uniqueTitles.join(', ')}.`
-    : 'Du har fått tilgang til Ikontroll.';
+    : 'Du har fått tilgang til Skillo.';
   const message = `${courseText} Brukernavn: ${email}. Passord: ${password}. Logg inn: ${loginUrl}`;
   await sendSveveSms(recipient, message);
 };
