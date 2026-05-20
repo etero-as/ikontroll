@@ -945,7 +945,7 @@ export default function MediaLibraryPage() {
             {ml.newFolder}
           </button>
           <button type="button" disabled={uploading} onClick={() => uploadInputRef.current?.click()}
-            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
             <Upload size={16} />
             {uploading ? ml.uploading : ml.addMedia}
           </button>
@@ -1383,7 +1383,7 @@ export default function MediaLibraryPage() {
             <p className="text-sm text-slate-600">{t.admin.brokenMedia.modalBody(replaceTarget.moduleRefs.length || replaceTarget.moduleRefCount || 0)}</p>
             <div className="flex flex-col gap-2 pt-1">
               <button type="button" disabled={replacing} onClick={() => replaceInputRef.current?.click()}
-                className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+                className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
                 {replacing ? t.admin.brokenMedia.replacing : t.admin.brokenMedia.uploadButton}
               </button>
               <button type="button" disabled={replacing} onClick={() => setReplaceTarget(null)}

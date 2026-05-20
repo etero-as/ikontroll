@@ -607,7 +607,7 @@ export default function CustomerManager() {
             </button>
             <button
               onClick={openCreate}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800"
             >
               {t.admin.customers.newCustomer}
             </button>
@@ -806,7 +806,7 @@ export default function CustomerManager() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+                  className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
                 >
                   {busy ? t.admin.customers.saving : editingCustomer ? t.admin.customers.updateCustomer : t.admin.customers.createCustomer}
                 </button>

@@ -34,7 +34,7 @@ export const PortalModePrompt = () => {
           </button>
           <button
             onClick={() => setPortalMode('user')}
-            className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="rounded-xl bg-brand-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-800"
           >
             {t.portalMode.user}
           </button>

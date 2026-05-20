@@ -1207,7 +1207,7 @@ export default function CourseDetailManager({ courseId }: { courseId: string }) 
           </div>
           <button
             onClick={openCreateModule}
-            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="cursor-pointer inline-flex items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800"
           >
             {t.admin.courseDetail.newModule}
           </button>
@@ -1330,7 +1330,7 @@ const ModalFormFooter = ({
         </button>
         <button
           type="submit"
-          className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+          className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-70"
           disabled={loading}
         >
           {submitLabel}

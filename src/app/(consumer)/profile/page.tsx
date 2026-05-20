@@ -40,7 +40,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col items-center gap-8 pb-10">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-900 text-3xl font-bold text-white shadow-lg">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-brand-700 text-3xl font-bold text-white shadow-lg">
           {profile?.firstName?.[0]}
           {profile?.lastName?.[0]}
         </div>

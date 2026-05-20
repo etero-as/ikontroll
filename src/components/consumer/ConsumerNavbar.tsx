@@ -160,7 +160,7 @@ const ConsumerNavbar = () => {
               <button
                 ref={avatarButtonRef}
                 onClick={toggleAvatarMenu}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-sm font-bold text-white transition hover:bg-brand-800"
                 aria-haspopup="menu"
                 aria-expanded={isAvatarMenuOpen}
               >
@@ -188,7 +188,7 @@ const ConsumerNavbar = () => {
           <div className="relative h-full w-64 bg-white p-6 shadow-xl flex flex-col justify-between">
             <div>
                 <div className="mb-8 flex flex-col items-center gap-3">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-xl font-bold text-white">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">
                     {profile?.firstName?.[0]}
                     {profile?.lastName?.[0]}
                   </div>

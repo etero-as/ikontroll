@@ -119,7 +119,7 @@ export default function CourseEditBar() {
               <button
                 type="button"
                 onClick={handlers.openAddModule}
-                className="rounded-xl bg-slate-900 px-2.5 py-1 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="rounded-xl bg-brand-700 px-2.5 py-1 text-sm font-semibold text-white transition hover:bg-brand-800"
               >
                 {t.admin.moduleDetail.addModule}
               </button>
@@ -245,7 +245,7 @@ export default function CourseEditBar() {
               />
               <button
                 type="submit"
-                className="cursor-pointer rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                className="cursor-pointer rounded-lg bg-brand-700 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-800"
               >
                 {t.common.add}
               </button>

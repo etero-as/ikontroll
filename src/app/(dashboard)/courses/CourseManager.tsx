@@ -235,7 +235,7 @@ export default function CourseManager() {
           </div>
           <button
             onClick={() => { setFormError(null); setCreateOpen(true); }}
-            className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-700 hover:shadow-lg active:scale-[0.97] active:shadow-none"
+            className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-800 hover:shadow-lg active:scale-[0.97] active:shadow-none"
           >
             {t.admin.courses.newCourse}
           </button>
@@ -398,7 +398,7 @@ const CourseModalFrame = ({
             </button>
             <button
               type="submit"
-              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-70"
               disabled={loading}
             >
               {submitLabel}

@@ -138,7 +138,7 @@ export default function CompleteProfilePage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+          className="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
         >
           {submitting ? t.common.saving : t.profile.saveAndContinue}
         </button>

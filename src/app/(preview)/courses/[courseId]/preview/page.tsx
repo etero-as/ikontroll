@@ -376,7 +376,7 @@ export default function CoursePreviewPage({
             </div>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-slate-900 transition-all"
+                className="h-full rounded-full bg-brand-600 transition-all"
                 style={{ width: `${courseProgressPercent}%` }}
               />
             </div>
@@ -442,7 +442,7 @@ export default function CoursePreviewPage({
           <button
             onClick={handleStartCourse}
             disabled={!nextModuleId}
-            className="w-full max-w-xl rounded-2xl bg-slate-900 px-8 py-3 text-center text-base font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full max-w-xl rounded-2xl bg-brand-700 px-8 py-3 text-center text-base font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {startButtonLabel}
           </button>

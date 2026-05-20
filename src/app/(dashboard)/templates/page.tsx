@@ -439,7 +439,7 @@ export default function TemplatesPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-2xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving ? t.admin.templates.saving : t.admin.templates.saveTemplate}
             </button>

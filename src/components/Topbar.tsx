@@ -183,7 +183,7 @@ export function Topbar() {
           <button
             ref={buttonRef}
             onClick={toggleMenu}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white transition hover:bg-brand-800"
             aria-haspopup="menu"
             aria-expanded={open}
           >

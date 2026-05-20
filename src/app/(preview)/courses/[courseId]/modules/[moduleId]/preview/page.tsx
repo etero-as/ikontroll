@@ -657,7 +657,7 @@ export default function ModulePreviewPage({
             </span>
             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-slate-900 transition-all"
+                className="h-full rounded-full bg-brand-600 transition-all"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -892,7 +892,7 @@ export default function ModulePreviewPage({
                         }
                         className={`w-full rounded-2xl border px-4 py-3 text-left text-sm transition ${
                           isSelected
-                            ? 'border-slate-900 bg-slate-900 text-white'
+                            ? 'border-brand-700 bg-brand-700 text-white'
                             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                         }`}
                       >
@@ -912,7 +912,7 @@ export default function ModulePreviewPage({
                   <button
                     onClick={handleNext}
                     disabled={!(answers[currentQuestion.id]?.length ?? 0)}
-                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {currentIndex === questions.length - 1
                       ? L.finishQuiz

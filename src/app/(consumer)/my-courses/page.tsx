@@ -176,7 +176,7 @@ export default function MyCoursesPage() {
             <button
               type="submit"
               disabled={redeeming || !courseCode.trim()}
-              className="cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="cursor-pointer rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {redeeming ? t.courses.addingCourse : t.courses.addCourse}
             </button>
@@ -271,7 +271,7 @@ function ConsumerCourseCard({ course, locale }: { course: Course; locale: string
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className={`h-full rounded-full transition-all ${isCompleted ? 'bg-emerald-500' : 'bg-slate-900'}`}
+              className={`h-full rounded-full transition-all ${isCompleted ? 'bg-emerald-500' : 'bg-brand-600'}`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -298,7 +298,7 @@ function MembershipChip({
       onClick={() => onSelect(membership.customerId)}
       className={`rounded-full px-4 py-1 text-sm font-semibold transition ${
         isActive
-          ? 'bg-slate-900 text-white'
+          ? 'bg-brand-700 text-white'
           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
       }`}
     >
