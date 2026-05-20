@@ -1,5 +1,5 @@
-import type { Metadata } from 'next';
-import { Inter, Roboto_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Geist, Inter, Roboto_Mono } from 'next/font/google';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { LocaleProvider } from '@/context/LocaleContext';
@@ -11,14 +11,25 @@ const interSans = Inter({
   subsets: ['latin'],
 });
 
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
 const mono = Roboto_Mono({
   variable: '--font-roboto-mono',
   subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: 'IKontroll Portal',
-  description: 'Administrasjon for IKontroll',
+  title: 'Skillo',
+  description: 'Skillo — e-læring som faktisk fester seg.',
+  applicationName: 'Skillo',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0D9488',
 };
 
 export default function RootLayout({
@@ -29,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="no">
       <body
-        className={`${interSans.variable} ${mono.variable} bg-slate-50 text-slate-900 antialiased`}
+        className={`${interSans.variable} ${geistSans.variable} ${mono.variable} bg-slate-50 text-slate-900 antialiased`}
       >
         <LocaleProvider>
           <AuthProvider>{children}</AuthProvider>
