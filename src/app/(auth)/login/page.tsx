@@ -147,7 +147,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={showReset ? resetSubmitting : submitting}
-          className="w-full cursor-pointer rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full cursor-pointer rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {showReset
             ? resetSubmitting

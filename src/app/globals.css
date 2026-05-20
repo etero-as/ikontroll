@@ -8,6 +8,20 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Skillo brand palette
+     Use bg-brand-600 / text-brand-700 / hover:bg-brand-800 etc.
+     Primary CTAs use brand-700 (passes WCAG AA for white text). */
+  --color-brand-50:  #F0FDFA;
+  --color-brand-100: #CCFBF1;
+  --color-brand-200: #99F6E4;
+  --color-brand-300: #5EEAD4;
+  --color-brand-400: #2DD4BF;
+  --color-brand-500: #14B8A6;
+  --color-brand-600: #0D9488;
+  --color-brand-700: #0F766E;
+  --color-brand-800: #115E59;
+  --color-brand-900: #134E4A;
 }
 
 body {

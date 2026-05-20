@@ -97,7 +97,7 @@ function MagicLoginContent() {
         </div>
         {isLoading ? (
           <>
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-brand-600" />
             <h1 className="text-xl font-semibold text-slate-900">{t.auth.loggingYouIn}</h1>
             <p className="mt-2 text-sm text-slate-500">
               {t.auth.magicLinkDescription}
@@ -112,7 +112,7 @@ function MagicLoginContent() {
             <div className="mt-6 flex flex-col gap-3">
               <Link
                 href="/login"
-                className="w-full rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="w-full rounded-2xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800"
               >
                 {t.auth.goToLogin}
               </Link>
@@ -139,7 +139,7 @@ export default function MagicLoginPage() {
             <div className="mb-6 flex justify-center">
               <Logo variant="stacked" size={56} />
             </div>
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-brand-600" />
             <h1 className="text-xl font-semibold text-slate-900">Logger deg inn …</h1>
             <p className="mt-2 text-sm text-slate-500">
               Vi bruker lenken du fikk tilsendt for å logge deg inn automatisk.
