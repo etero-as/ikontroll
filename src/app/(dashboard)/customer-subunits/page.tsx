@@ -515,19 +515,22 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     }
   };
 
-  const handleDelete = async (subunit: Customer) => {
+  const handleDeleteFromModal = useCallback(async () => {
+    if (!editingCustomer) return;
     const confirmed = window.confirm(
-      t.admin.subunits.deleteConfirm(subunit.companyName),
+      t.admin.subunits.deleteConfirm(editingCustomer.companyName),
     );
     if (!confirmed) return;
-
     try {
-      await deleteSubunit(subunit.id);
+      await deleteSubunit(editingCustomer.id);
+      setIsFormOpen(false);
+      setEditingCustomer(null);
+      setFormError(null);
     } catch (err) {
       console.error('Failed to delete subunit', err);
       alert(t.admin.subunits.deleteError);
     }
-  };
+  }, [editingCustomer, deleteSubunit, t]);
 
   const renderSubunitRows = (subunit: Customer, depth: number): React.ReactNode[] => {
     const children = childrenMap.get(subunit.id) ?? [];
@@ -535,14 +538,14 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
     const isExpanded = expandedIds.has(subunit.id);
 
     const row = (
-      <tr key={subunit.id} className="border-b border-slate-100 text-sm last:border-none">
+      <tr key={subunit.id} className="border-b border-slate-100 text-sm last:border-none cursor-pointer hover:bg-slate-50" onClick={() => openEdit(subunit)}>
         <td className="py-3">
           <div className="flex items-start gap-2" style={{ paddingLeft: depth * 24 }}>
             <div className="flex h-6 w-6 items-center justify-center">
               {hasChildren ? (
                 <button
                   type="button"
-                  onClick={() => toggleExpanded(subunit.id)}
+                  onClick={(e) => { e.stopPropagation(); toggleExpanded(subunit.id); }}
                   className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   {isExpanded ? '▾' : '▸'}
@@ -578,26 +581,6 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
           <span className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-medium ${statusBadges[subunit.status]}`}>
             {subunit.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
           </span>
-        </td>
-        <td className="py-3 text-right">
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              onClick={() => openEdit(subunit)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              aria-label={t.admin.customers.editCustomerAria}
-            >
-              <span className="text-xs font-semibold">✏️</span>
-            </button>
-            <button
-              onClick={() => handleDelete(subunit)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-danger-200 text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
-              aria-label={t.admin.customers.deleteCustomerAria}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 5 5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
         </td>
       </tr>
     );
@@ -666,8 +649,7 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                   <th className="pb-2">{t.admin.customers.company}</th>
                   <th className="pb-2">{t.admin.customers.contact}</th>
                   <th className="pb-2">{t.admin.customers.orgNumber}</th>
-                  <th className="pb-2"></th>
-                  <th className="pb-2 text-right">{t.admin.customers.actions}</th>
+                  <th className="pb-2">{t.admin.customers.status}</th>
                 </tr>
               </thead>
               <tbody>
@@ -926,26 +908,40 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  disabled={busy}
-                >
-                  {t.common.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
-                >
-                  {busy
-                    ? t.admin.subunits.saving
-                    : editingCustomer
-                      ? t.admin.subunits.updateSubunit
-                      : t.admin.subunits.createSubunit}
-                </button>
+              <div className="flex items-center justify-between gap-3">
+                {editingCustomer ? (
+                  <button
+                    type="button"
+                    onClick={handleDeleteFromModal}
+                    disabled={busy}
+                    className="rounded-xl border border-danger-200 px-4 py-2 text-sm font-semibold text-danger-600 transition hover:bg-danger-50 disabled:opacity-70"
+                  >
+                    {t.admin.subunits.deleteSubunit}
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    disabled={busy}
+                  >
+                    {t.common.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
+                  >
+                    {busy
+                      ? t.admin.subunits.saving
+                      : editingCustomer
+                        ? t.admin.subunits.updateSubunit
+                        : t.admin.subunits.createSubunit}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -445,25 +445,27 @@ export default function CustomerManager() {
     setExpandedCustomerIds(new Set());
   }, []);
 
-  const handleDelete = useCallback(
-    async (customer: Customer) => {
-      const confirmed = window.confirm(t.admin.customers.deleteConfirm(customer.companyName));
-      if (!confirmed) return;
-      try {
-        await deleteCustomer(customer.id);
-      } catch (err) {
-        console.error('Failed to delete customer', err);
-        alert(t.admin.customers.deleteError);
-      }
-    },
-    [deleteCustomer, t],
-  );
+  const handleDeleteFromModal = useCallback(async () => {
+    if (!editingCustomer) return;
+    const confirmed = window.confirm(t.admin.customers.deleteConfirm(editingCustomer.companyName));
+    if (!confirmed) return;
+    try {
+      await deleteCustomer(editingCustomer.id);
+      setIsFormOpen(false);
+      setEditingCustomer(null);
+      setFormError(null);
+      setResetStatus(null);
+    } catch (err) {
+      console.error('Failed to delete customer', err);
+      alert(t.admin.customers.deleteError);
+    }
+  }, [editingCustomer, deleteCustomer, t]);
 
   const tableRows = useMemo(() => {
     if (!customers.length) {
       return (
         <tr>
-          <td colSpan={5} className="py-10 text-center text-sm text-slate-500">
+          <td colSpan={4} className="py-10 text-center text-sm text-slate-500">
             {t.admin.customers.noCustomers}
           </td>
         </tr>
@@ -476,14 +478,14 @@ export default function CustomerManager() {
       const isExpanded = expandedCustomerIds.has(customer.id);
 
       const row = (
-        <tr key={customer.id} className="border-b border-slate-100 text-sm last:border-none">
+        <tr key={customer.id} className="border-b border-slate-100 text-sm last:border-none cursor-pointer hover:bg-slate-50" onClick={() => openEdit(customer)}>
           <td className="py-3">
             <div className="flex items-start gap-2" style={{ paddingLeft: depth * 24 }}>
               <div className="flex h-6 w-6 items-center justify-center">
                 {hasChildren ? (
                   <button
                     type="button"
-                    onClick={() => toggleExpanded(customer.id)}
+                    onClick={(e) => { e.stopPropagation(); toggleExpanded(customer.id); }}
                     className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     aria-label={
                       isExpanded
@@ -525,33 +527,6 @@ export default function CustomerManager() {
               {customer.status === 'active' ? t.admin.customers.active : t.admin.customers.inactive}
             </span>
           </td>
-          <td className="py-3 text-right">
-            <div className="flex flex-wrap justify-end gap-2">
-              <Link
-                href={`/customers/${customer.id}`}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.admin.customers.manageUsersAria}
-              >
-                <span className="text-xs font-semibold">🎓</span>
-              </Link>
-              <button
-                onClick={() => openEdit(customer)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label={t.admin.customers.editCustomerAria}
-              >
-                <span className="text-xs font-semibold">✏️</span>
-              </button>
-              <button
-                onClick={() => handleDelete(customer)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-danger-200 text-danger-600 transition hover:border-danger-300 hover:bg-danger-50"
-                aria-label={t.admin.customers.deleteCustomerAria}
-              >
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M15 5 5 15M5 5l10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </div>
-          </td>
         </tr>
       );
 
@@ -565,7 +540,6 @@ export default function CustomerManager() {
     customers,
     customerChildrenMap,
     expandedCustomerIds,
-    handleDelete,
     openEdit,
     toggleExpanded,
     topLevelCustomers,
@@ -632,8 +606,7 @@ export default function CustomerManager() {
                   <th className="pb-2">{t.admin.customers.company}</th>
                   <th className="pb-2">{t.admin.customers.contact}</th>
                   <th className="pb-2">{t.admin.customers.orgNumber}</th>
-                  <th className="pb-2"></th>
-                  <th className="pb-2 text-right"></th>
+                  <th className="pb-2">{t.admin.customers.status}</th>
                 </tr>
               </thead>
               <tbody>{tableRows}</tbody>
@@ -794,22 +767,44 @@ export default function CustomerManager() {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  disabled={busy}
-                >
-                  {t.admin.customers.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
-                >
-                  {busy ? t.admin.customers.saving : editingCustomer ? t.admin.customers.updateCustomer : t.admin.customers.createCustomer}
-                </button>
+              <div className="flex items-center justify-between gap-3">
+                {editingCustomer ? (
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/customers/${editingCustomer.id}`}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {t.admin.customers.manageUsersAria}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleDeleteFromModal}
+                      disabled={busy}
+                      className="rounded-xl border border-danger-200 px-4 py-2 text-sm font-semibold text-danger-600 transition hover:bg-danger-50 disabled:opacity-70"
+                    >
+                      {t.admin.customers.deleteCustomerAria}
+                    </button>
+                  </div>
+                ) : (
+                  <span />
+                )}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    disabled={busy}
+                  >
+                    {t.admin.customers.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70"
+                  >
+                    {busy ? t.admin.customers.saving : editingCustomer ? t.admin.customers.updateCustomer : t.admin.customers.createCustomer}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
