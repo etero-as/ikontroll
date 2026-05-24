@@ -364,7 +364,15 @@ export default function CustomerManager() {
     try {
       setBusy(true);
       setFormError(null);
-      const payload: CustomerPayload = { ...customerValues };
+      const payload: CustomerPayload = {
+        ...customerValues,
+        parentCustomerId: editingCustomer
+          ? (editingCustomer.parentCustomerId ?? null)
+          : null,
+        parentCustomerName: editingCustomer
+          ? (editingCustomer.parentCustomerName ?? null)
+          : null,
+      };
 
       if (editingCustomer) {
         await updateCustomer(editingCustomer.id, payload);
