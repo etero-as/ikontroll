@@ -255,6 +255,8 @@ export const translations = {
         viewList: 'Listevisning',
         viewGrid: 'Rutenettvisning',
         itemsSelected: (n: number) => n === 1 ? '1 element valgt' : `${n} elementer valgt`,
+        loadMore: 'Last inn flere',
+        showingOf: (shown: number, total: number) => `Viser ${shown} av ${total}`,
       },
       brokenMedia: {
         replaceButton: 'Erstatt bilde',
@@ -1082,6 +1084,8 @@ export const translations = {
         viewList: 'List view',
         viewGrid: 'Grid view',
         itemsSelected: (n: number) => n === 1 ? '1 item selected' : `${n} items selected`,
+        loadMore: 'Load more',
+        showingOf: (shown: number, total: number) => `Showing ${shown} of ${total}`,
       },
       brokenMedia: {
         replaceButton: 'Replace image',
