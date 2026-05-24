@@ -31,7 +31,6 @@ import type {
   ModuleMediaItem,
   ModuleMediaPoolItem,
   ModuleMediaSelections,
-  ModuleMediaType,
   AnnotationShape,
 } from '@/types/course';
 
@@ -414,10 +413,8 @@ const LocaleMediaEditor = ({
     [pool, selections, activeLanguage, mediaSync],
   );
 
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
-  const videoInputRef = useRef<HTMLInputElement | null>(null);
-  const documentInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploading, setUploading] = useState<'image' | 'video' | 'document' | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [editingItem, setEditingItem] = useState<ModuleMediaItem | null>(null);
   const [previewItem, setPreviewItem] = useState<ModuleMediaItem | null>(null);
   const [replaceItem, setReplaceItem] = useState<ModuleMediaItem | null>(null);
@@ -806,20 +803,14 @@ const LocaleMediaEditor = ({
 
   /* ---- Upload / Pick ---- */
 
-  const [pickerType, setPickerType] = useState<'image' | 'video' | 'document' | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
 
-  const handleUploadClick = (type: 'image' | 'video' | 'document') => {
-    setPickerType(type);
+  const handleUploadClick = () => {
+    setShowPicker(true);
   };
 
-  const triggerFileInput = (type: 'image' | 'video' | 'document') => {
-    if (type === 'image') {
-      imageInputRef.current?.click();
-    } else if (type === 'video') {
-      videoInputRef.current?.click();
-    } else {
-      documentInputRef.current?.click();
-    }
+  const triggerFileInput = () => {
+    mediaInputRef.current?.click();
   };
 
   const handleLibrarySelect = (asset: ModuleMediaPoolItem) => {
@@ -851,14 +842,13 @@ const LocaleMediaEditor = ({
     }
   };
 
-  const handleFileChange = async (
-    event: ChangeEvent<HTMLInputElement>,
-    type: 'image' | 'video' | 'document',
-  ) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    setUploading(type);
+    const type: 'image' | 'video' | 'document' = file.type.startsWith('video/') ? 'video'
+      : file.type === 'application/pdf' ? 'document' : 'image';
+    setUploading(true);
     try {
       const storagePath = buildModuleAssetPath(
         courseId,
@@ -883,22 +873,19 @@ const LocaleMediaEditor = ({
       console.error('Failed to upload file', err);
       alert(t.admin.moduleDetail.uploadFileError);
     } finally {
-      setUploading(null);
+      setUploading(false);
     }
   };
 
   /* ---- Render ---- */
 
-  const pickerAllowedTypes = pickerType ? [pickerType] as ModuleMediaType[] : undefined;
-
   return (
     <div className="space-y-3">
-      {pickerType && typeof window !== 'undefined' && (
+      {showPicker && typeof window !== 'undefined' && (
         <MediaPicker
           onSelect={handleLibrarySelect}
-          onUploadClick={() => triggerFileInput(pickerType)}
-          allowedTypes={pickerAllowedTypes}
-          onClose={() => setPickerType(null)}
+          onUploadClick={triggerFileInput}
+          onClose={() => setShowPicker(false)}
         />
       )}
       {editingItem && typeof window !== 'undefined' && createPortal(
@@ -1096,27 +1083,11 @@ const LocaleMediaEditor = ({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => handleUploadClick('image')}
+            onClick={handleUploadClick}
             className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={uploading === 'image'}
+            disabled={uploading}
           >
-            {uploading === 'image' ? t.common.uploading : t.admin.moduleDetail.uploadImage}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleUploadClick('video')}
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={uploading === 'video'}
-          >
-            {uploading === 'video' ? t.common.uploading : t.admin.moduleDetail.uploadVideo}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleUploadClick('document')}
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={uploading === 'document'}
-          >
-            {uploading === 'document' ? t.common.uploading : t.admin.moduleDetail.uploadDocument}
+            {uploading ? t.common.uploading : t.admin.moduleDetail.uploadMedia}
           </button>
         </div>
         <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -1174,25 +1145,11 @@ const LocaleMediaEditor = ({
         </div>
       </div>
       <input
-        ref={imageInputRef}
+        ref={mediaInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,application/pdf"
         className="hidden"
-        onChange={(event) => handleFileChange(event, 'image')}
-      />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={(event) => handleFileChange(event, 'video')}
-      />
-      <input
-        ref={documentInputRef}
-        type="file"
-        accept="application/pdf"
-        className="hidden"
-        onChange={(event) => handleFileChange(event, 'document')}
+        onChange={handleFileChange}
       />
     </div>
   );

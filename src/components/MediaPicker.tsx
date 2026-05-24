@@ -129,6 +129,11 @@ export default function MediaPicker({
     return result;
   }, [assets, search, typeFilter]);
 
+  const PAGE_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [filtered]);
+  const visibleAssets = filtered.slice(0, visibleCount);
+
   // Initial choice screen
   if (mode === null) {
     return createPortal(
@@ -238,47 +243,63 @@ export default function MediaPicker({
             </p>
           </div>
         ) : (
-          <div className="grid max-h-96 gap-3 overflow-y-auto sm:grid-cols-3">
-            {filtered.map((asset) => {
-              const fileName = getFileNameFromUrl(asset.url);
-              return (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {visibleAssets.map((asset) => {
+                const fileName = getFileNameFromUrl(asset.url);
+                return (
+                  <button
+                    key={asset.url}
+                    type="button"
+                    onClick={() => {
+                      onSelect(asset);
+                      onClose();
+                    }}
+                    className="cursor-pointer group overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-slate-400 hover:shadow-md"
+                  >
+                    <div className="relative h-24 w-full bg-slate-100">
+                      {asset.type === 'image' ? (
+                        <Image
+                          fill
+                          src={asset.url}
+                          alt={fileName}
+                          className="object-contain"
+                          sizes="200px"
+                        />
+                      ) : asset.type === 'video' ? (
+                        <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">
+                          🎥
+                        </div>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">
+                          📄
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-2 py-1.5">
+                      <p className="truncate text-xs font-medium text-slate-700" title={fileName}>
+                        {fileName}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {filtered.length > visibleCount && (
+              <div className="flex flex-col items-center gap-2 pt-1">
+                <p className="text-xs text-slate-400">
+                  {t.admin.mediaLibrary.showingOf(visibleCount, filtered.length)}
+                </p>
                 <button
-                  key={asset.url}
                   type="button"
-                  onClick={() => {
-                    onSelect(asset);
-                    onClose();
-                  }}
-                  className="cursor-pointer group overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:border-slate-400 hover:shadow-md"
+                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                  className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  <div className="relative h-24 w-full bg-slate-100">
-                    {asset.type === 'image' ? (
-                      <Image
-                        fill
-                        src={asset.url}
-                        alt={fileName}
-                        className="object-contain"
-                        sizes="200px"
-                      />
-                    ) : asset.type === 'video' ? (
-                      <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">
-                        🎥
-                      </div>
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">
-                        📄
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-2 py-1.5">
-                    <p className="truncate text-xs font-medium text-slate-700" title={fileName}>
-                      {fileName}
-                    </p>
-                  </div>
+                  {t.admin.mediaLibrary.loadMore}
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            )}
+          </>
         )}
         <button
           type="button"
