@@ -135,6 +135,7 @@ export default function MediaLibraryPage() {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
   const [syncingRefs, setSyncingRefs] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const replaceInputRef = useRef<HTMLInputElement | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -360,6 +361,7 @@ export default function MediaLibraryPage() {
   useEffect(() => { void loadFolder(currentFolderId); }, [currentFolderId, loadFolder]);
   useEffect(() => { void loadAllFolders(); }, [loadAllFolders]);
   useEffect(() => { void loadModuleRefs(); }, [loadModuleRefs]);
+  useEffect(() => { setVisibleCount(20); }, [currentFolderId, filter, search]);
 
   const reload = useCallback(() => {
     void loadFolder(currentFolderId);
@@ -400,6 +402,8 @@ export default function MediaLibraryPage() {
 
     return items;
   }, [assets, folders, filter, search]);
+
+  const visibleItems = useMemo(() => listItems.slice(0, visibleCount), [listItems, visibleCount]);
 
   /* ---- Delete ---- */
   const handleDeleteAsset = useCallback(async (asset: LibraryAsset) => {
@@ -755,14 +759,14 @@ export default function MediaLibraryPage() {
       const end = Math.max(focusedIndex, index);
       const ids = new Set<string>();
       for (let i = start; i <= end; i++) {
-        const it = listItems[i];
+        const it = visibleItems[i];
         ids.add(it._kind === 'folder' ? it.id : ((it as LibraryAsset).libraryDocId ?? it.id));
       }
       setSelectedIds(ids);
     } else {
       setSelectedIds(new Set([itemId]));
     }
-  }, [focusedIndex, listItems]);
+  }, [focusedIndex, visibleItems]);
 
   const handleRowDoubleClick = useCallback((item: ListItem) => {
     if (item._kind === 'folder') {
@@ -816,14 +820,14 @@ export default function MediaLibraryPage() {
     // Don't handle when typing in search
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
-    const focusedItem = focusedIndex >= 0 && focusedIndex < listItems.length ? listItems[focusedIndex] : null;
+    const focusedItem = focusedIndex >= 0 && focusedIndex < visibleItems.length ? visibleItems[focusedIndex] : null;
 
     switch (e.key) {
       case 'ArrowDown': {
         e.preventDefault();
-        const next = Math.min(focusedIndex + 1, listItems.length - 1);
+        const next = Math.min(focusedIndex + 1, visibleItems.length - 1);
         setFocusedIndex(next);
-        const it = listItems[next];
+        const it = visibleItems[next];
         if (it) setSelectedIds(new Set([it._kind === 'folder' ? it.id : ((it as LibraryAsset).libraryDocId ?? it.id)]));
         break;
       }
@@ -831,7 +835,7 @@ export default function MediaLibraryPage() {
         e.preventDefault();
         const prev = Math.max(focusedIndex - 1, 0);
         setFocusedIndex(prev);
-        const it = listItems[prev];
+        const it = visibleItems[prev];
         if (it) setSelectedIds(new Set([it._kind === 'folder' ? it.id : ((it as LibraryAsset).libraryDocId ?? it.id)]));
         break;
       }
@@ -906,13 +910,13 @@ export default function MediaLibraryPage() {
       case 'a': {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
-          const allIds = new Set(listItems.map((it) => it._kind === 'folder' ? it.id : ((it as LibraryAsset).libraryDocId ?? it.id)));
+          const allIds = new Set(visibleItems.map((it) => it._kind === 'folder' ? it.id : ((it as LibraryAsset).libraryDocId ?? it.id)));
           setSelectedIds(allIds);
         }
         break;
       }
     }
-  }, [focusedIndex, listItems, renamingId, handleRowDoubleClick, selectedIds, cutIds, handlePaste, handleUpload]);
+  }, [focusedIndex, visibleItems, renamingId, handleRowDoubleClick, selectedIds, cutIds, handlePaste, handleUpload]);
 
   /* ---- Filter buttons ---- */
   const filterButtons: { key: FilterType; label: string }[] = [
@@ -1130,7 +1134,7 @@ export default function MediaLibraryPage() {
 
               {/* Rows */}
               <div data-list-bg>
-                {listItems.map((item, index) => {
+                {visibleItems.map((item, index) => {
                   const itemId = item._kind === 'folder' ? item.id : ((item as LibraryAsset).libraryDocId ?? item.id);
                   const isSelected = selectedIds.has(itemId);
                   const isFocused = focusedIndex === index;
@@ -1165,12 +1169,7 @@ export default function MediaLibraryPage() {
                       `}>
                       <div className="flex items-center gap-3 overflow-hidden">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-                          {item._kind === 'asset' && item.type === 'image' ? (
-                            <Image src={item.url} alt={name} width={36} height={36}
-                              className="h-9 w-9 rounded object-cover" />
-                          ) : (
-                            getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)
-                          )}
+                          {getTypeIcon(item._kind === 'folder' ? 'folder' : (item as LibraryAsset).type)}
                         </span>
                         {renamingId === itemId ? (
                           <input ref={renameInputRef}
@@ -1200,7 +1199,7 @@ export default function MediaLibraryPage() {
           ) : (
             /* Grid view */
             <div data-list-bg className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 p-3">
-              {listItems.map((item, index) => {
+              {visibleItems.map((item, index) => {
                 const itemId = item._kind === 'folder' ? item.id : ((item as LibraryAsset).libraryDocId ?? item.id);
                 const isSelected = selectedIds.has(itemId);
                 const isFocused = focusedIndex === index;
@@ -1261,6 +1260,19 @@ export default function MediaLibraryPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {listItems.length > visibleCount && (
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <p className="text-xs text-slate-400">{ml.showingOf(visibleCount, listItems.length)}</p>
+          <button
+            type="button"
+            onClick={() => setVisibleCount((c) => c + 20)}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {ml.loadMore}
+          </button>
         </div>
       )}
 
