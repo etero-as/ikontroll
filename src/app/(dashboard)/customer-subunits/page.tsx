@@ -472,8 +472,12 @@ const SubunitManager = ({ customer }: { customer: Customer }) => {
         contactPerson: customerValues.contactPerson.trim(),
         contactEmail: customerValues.contactEmail.trim(),
         allowSubunits: customerValues.allowSubunits ?? false,
-        parentCustomerId: customer.id,
-        parentCustomerName: customer.companyName,
+        parentCustomerId: editingCustomer
+          ? (editingCustomer.parentCustomerId ?? null)
+          : customer.id,
+        parentCustomerName: editingCustomer
+          ? (editingCustomer.parentCustomerName ?? null)
+          : customer.companyName,
       };
 
       if (editingCustomer) {
