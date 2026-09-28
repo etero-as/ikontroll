@@ -117,6 +117,7 @@ const SystemOwnerDashboard = () => {
         if (!cancelled) {
           setMetrics(json);
           setError(null);
+          setLoading(false);
         }
       } catch (err) {
         console.error(err);
