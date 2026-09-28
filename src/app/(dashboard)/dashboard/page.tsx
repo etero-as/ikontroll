@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  CustomerAdminDashboardSkeleton,
+  SystemOwnerDashboardSkeleton,
+} from '@/components/DashboardSkeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useCustomer } from '@/hooks/useCustomer';
 import { useCourses } from '@/hooks/useCourses';
@@ -103,9 +107,8 @@ const SystemOwnerDashboard = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchMetrics = async () => {
+    const fetchMetrics = async (isBackgroundRefresh: boolean) => {
       try {
-        setLoading(true);
         const response = await fetch('/api/dashboard/system-owner');
         if (!response.ok) {
           throw new Error('Failed to load dashboard metrics');
@@ -114,21 +117,22 @@ const SystemOwnerDashboard = () => {
         if (!cancelled) {
           setMetrics(json);
           setError(null);
+          setLoading(false);
         }
       } catch (err) {
         console.error(err);
-        if (!cancelled) {
+        if (!cancelled && !isBackgroundRefresh) {
           setError(t.admin.dashboard.loadMetricsError);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !isBackgroundRefresh) {
           setLoading(false);
         }
       }
     };
 
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 60_000);
+    fetchMetrics(false);
+    const interval = setInterval(() => fetchMetrics(true), 60_000);
 
     return () => {
       cancelled = true;
@@ -169,14 +173,10 @@ const SystemOwnerDashboard = () => {
       </header>
 
       {loading && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">
-            {t.admin.dashboard.loadingMetrics}
-          </p>
-        </div>
+        <SystemOwnerDashboardSkeleton label={t.admin.dashboard.loadingMetrics} />
       )}
 
-      {error && !loading && (
+      {error && !loading && !metrics && (
         <div className="rounded-3xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-600">
           {error}
         </div>
@@ -388,11 +388,7 @@ const CustomerAdminDashboard = () => {
       </header>
 
       {loading && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">
-            {t.admin.dashboard.loadingData}
-          </p>
-        </div>
+        <CustomerAdminDashboardSkeleton label={t.admin.dashboard.loadingData} />
       )}
 
       {!loading && (

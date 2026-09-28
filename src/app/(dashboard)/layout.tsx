@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { AppShellSkeleton } from '@/components/AppShellSkeleton';
 import { CompanyPicker } from '@/components/CompanyPicker';
 import { CustomerPicker } from '@/components/CustomerPicker';
 import PortalModePrompt from '@/components/PortalModePrompt';
@@ -54,14 +55,7 @@ export default function DashboardLayout({
   }, [hasConsumerAccess, loading, needsRoleChoice, portalMode, router]);
 
   if (loading) {
-    return (
-      <div className="flex h-screen flex-col bg-slate-50">
-        <Topbar />
-        <main className="flex flex-1 items-center justify-center bg-slate-50">
-          <p className="text-sm font-semibold text-slate-500">{t.admin.layout.preparing}</p>
-        </main>
-      </div>
-    );
+    return <AppShellSkeleton label={t.admin.layout.preparing} />;
   }
 
   const hasAccess = isSystemOwner || isCustomerAdmin;

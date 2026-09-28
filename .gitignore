@@ -49,3 +49,9 @@ next-env.d.ts
 # ai
 .claude
 CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.md
+**/.claude/
+.claude-trace
+.mcp.json
+.anthropic/
