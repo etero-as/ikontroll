@@ -18,14 +18,17 @@ export const AppShellSkeleton = ({ label }: { label: string }) => (
     aria-label={label}
   >
     <span className="sr-only">{label}</span>
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+    <header
+      aria-hidden="true"
+      className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4"
+    >
       <Skeleton className="h-8 w-32 rounded-xl" />
       <div className="flex items-center gap-3">
         <Skeleton className="h-8 w-24 rounded-xl" />
         <Skeleton className="h-9 w-9 rounded-full" />
       </div>
     </header>
-    <div className="flex min-h-0 flex-1">
+    <div aria-hidden="true" className="flex min-h-0 flex-1">
       <SidebarSkeleton />
       <main className="flex-1 overflow-hidden bg-slate-50 p-6">
         <section className="space-y-6">
