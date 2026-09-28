@@ -28,7 +28,7 @@ export const SystemOwnerDashboardSkeleton = ({ label }: { label: string }) => (
         <SkeletonText width="11rem" className="h-2.5" />
       </div>
       <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-100">
+        <table aria-hidden="true" className="min-w-full divide-y divide-slate-100">
           <thead>
             <tr>
               {Array.from({ length: 4 }).map((_, index) => (
